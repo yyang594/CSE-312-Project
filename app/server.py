@@ -4,7 +4,8 @@ import logging
 import os
 
 # --- Setup Logging ---
-"""LOG_DIR = '/logs'
+
+LOG_DIR = '/logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
 logging.basicConfig(
@@ -12,7 +13,8 @@ logging.basicConfig(
     level=logging.INFO,
     format='[%(asctime)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
-)"""
+)
+
 app = Flask(__name__)
 db = database.get_db()
 collection = db['items']
@@ -21,7 +23,9 @@ collection = db['items']
 @app.route('/')
 @app.route('/home')
 def home():
-    return render_template('home.html')
+    #Note to self: grab username from db and replace variable with it to display name
+    username = "placeholder"
+    return render_template('home.html', username = username)
 
 @app.route('/game')
 def game():
