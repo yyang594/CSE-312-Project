@@ -2,11 +2,27 @@
 
 {% block content %}
     <h1>REGISTER</h1>
-    <form action="/register" method="POST">
-        <label for="fname">Username:</label><br>
-        <input type="text" id="username" name="username"><br>
-        <label for="lname">Password:</label><br>
-        <input type="password" id="password" name="password"><br><br>
-        <input type="submit" value="Submit">
+    <form id="registerform" action="/register" method="POST">
+        <label for="fname">Username:</label>
+        <input type="text" id="username" name="username" required><br>
+        <label for="lname">Password:</label>
+        <input type="password" id="password" name="password" required><br>
+        <label for="lname">Confirm Password:</label>
+        <input type="password" id="confirmpassword" required><br><br>
+        <button type="submit">Register</button>
     </form> 
+    <!--<script>
+        const form = document.getElementById("registerForm");
+        const passwordInput = document.getElementById("password");
+        const confirmInput = document.getElementById("confirmpassword");
+        const errorMsg = document.getElementById("errorMsg");
+        form.addEventListener("submit", function (event) {
+            const password = passwordInput.value;
+            const confirmpassword = confirmpassword.value;
+            if(password !== confirmpassword){
+                alert("Passwords do not match")
+                return
+            }
+        });
+    </script>-->
 {% endblock %}

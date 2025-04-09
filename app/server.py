@@ -24,7 +24,7 @@ collection = db['items']
 @app.route('/home')
 def home():
     #Note to self: grab username from db and replace variable with it to display name
-    username = "placeholder"
+    username = "Guest"
     return render_template('home.html', username = username)
 
 @app.route('/game')

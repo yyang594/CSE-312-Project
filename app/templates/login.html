@@ -3,10 +3,10 @@
 {% block content %}
     <h1>LOGIN</h1>
     <form action="/login" method="POST">
-        <label for="fname">Username:</label><br>
-        <input type="text" id="username" name="username"><br>
-        <label for="lname">Password:</label><br>
-        <input type="password" id="password" name="password"><br><br>
-        <input type="submit" value="Submit">
+        <label for="fname">Username:</label>
+        <input type="text" id="username" name="username" required><br>
+        <label for="lname">Password:</label>
+        <input type="password" id="password" name="password" required><br><br>
+        <button type="submit">Login</button>
     </form> 
 {% endblock %}
