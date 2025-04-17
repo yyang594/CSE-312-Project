@@ -14,7 +14,7 @@ canvas.width = window.innerWidth * 0.80;
 //Timer
 //Change maxTime to change countdown
 const timer = document.getElementById("timer")
-var maxTime = 5
+var maxTime = 30
 var totalTime = maxTime
 setInterval(function () {
     totalTime -= 1

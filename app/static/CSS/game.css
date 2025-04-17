@@ -1,4 +1,5 @@
-* { border: 1px solid Magenta; }
+/* Debugging purposes - Will outline every element in magenta
+ * { border: 1px solid Magenta; }*/
 
 #Canvas{
     /*Top right bottom left*/

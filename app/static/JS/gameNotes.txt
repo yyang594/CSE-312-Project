@@ -11,6 +11,7 @@ There is a canvas tag in game.html which goes by the id = "Canvas"
 2. Movement
 The variable keyPressed stores all current events into a set so if a player hits multiple buttons at once,
 the program can still calculate position and react with the updatePosition() function
+    - This is currently using wasd
 
     addEventListener("keydown", (e) =>) / addEventListener("keyup", (e) =>)
     - When a player hits/releases a key, this detects it and adds/deletes the key that was hit from the set
@@ -29,3 +30,6 @@ There is an element in the html which is using this to display the timer (id = "
     
     Note: I don't know which one would be better for detecting the answer the player has chosen so I'm currently printing both of them to console
 
+
+Possible bugs/features
+- Player can leave canvas (Can we just call them stupid and kill them if they're not on the answer by the end?)
