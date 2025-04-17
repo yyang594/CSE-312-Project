@@ -1,5 +1,14 @@
 {% extends 'base.html' %}
 
+{% block css_link %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/game.css') }}">
+{% endblock %}
+
 {% block content %}
-    <h1>Insert Game here</h1>
+    <div id = "questionBox">Insert Question Here</div>
+    <span>Timer: </span><span id="timer">00:30</span>
+    <br>
+    <canvas id="Canvas"></canvas>
+
+    <script src="{{ url_for('static', filename='JS/game.js') }}"></script>
 {% endblock %}

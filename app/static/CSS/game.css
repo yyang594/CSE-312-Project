@@ -1,0 +1,14 @@
+* { border: 1px solid Magenta; }
+
+#Canvas{
+    /*Top right bottom left*/
+    margin: 0% 0% 0% 0%;
+}
+
+#questionBox{
+    width: 80%;
+    height: 100px;
+    outline: 1px solid white;
+    margin: 0% 0% 0% 0%; 
+
+}

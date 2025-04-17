@@ -4,43 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='CSS/base.css') }}">
+
+    {% block css_link %}{% endblock %}
 </head>
-<style>
-    body {
-        background-color: #1a202c;
-        font-family: sans-serif;
-        color: white;
-        margin: 0;
-        padding: 0;
-    }
-    h1 {
-        text-align: center;
-    }
-    
-    label{
-        display: block;
-    }
-    .links {
-      margin-top: 40px;
-      margin-left: 40px;
-    }
-
-    .links a {
-      display: block;
-      color: #67b3ff;
-      font-size: 18px;
-      text-decoration: none;
-      margin-bottom: 10px;
-    }
-
-    .links a:hover {
-      color: #22d0d3;
-      text-decoration: underline;
-    }
-</style>
 <body>
     <div class="links">
-        <a href="{{ url_for('home') }}">Home</a><br>
+        <a href="{{ url_for('home') }}">Home</a>
         {% block content %} {% endblock %}
     </div>
 </body>

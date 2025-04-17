@@ -5,7 +5,7 @@ import os
 
 # --- Setup Logging ---
 
-LOG_DIR = '/logs'
+"""LOG_DIR = '/logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
 logging.basicConfig(
@@ -13,7 +13,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='[%(asctime)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
-)
+)"""
 
 app = Flask(__name__)
 db = database.get_db()
@@ -48,6 +48,13 @@ def register():
         return redirect(url_for('home'))
 
     return render_template('register.html')
+
+@app.route('/submit_questions', methods = ['GET','POST'])
+def submit_questions():
+    if request.method == 'POST':
+        pass
+
+    return render_template('question_submission.html')
 
 @app.route('/test')
 def test():

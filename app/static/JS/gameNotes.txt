@@ -1,0 +1,31 @@
+Purpose: This is a document outlining how game.js functions so far.
+
+1. Canvas (Game board)
+There is a canvas tag in game.html which goes by the id = "Canvas"
+    <canvas id="Canvas"></canvas>
+    - This functions as the base of the game.
+    Core gameplay loop:
+    
+    function gameLoop() is where the game is looping so that the canvas can update every tick.
+
+2. Movement
+The variable keyPressed stores all current events into a set so if a player hits multiple buttons at once,
+the program can still calculate position and react with the updatePosition() function
+
+    addEventListener("keydown", (e) =>) / addEventListener("keyup", (e) =>)
+    - When a player hits/releases a key, this detects it and adds/deletes the key that was hit from the set
+
+    updatePosition()
+    - Updates position
+
+3. Timer
+There is a timer set to 30secs which will count down and reset itself when reaching 0
+There is an element in the html which is using this to display the timer (id = "timer")
+    <span id="timer">00:30</span>
+
+    
+    3b. Answer Detection
+    At the end of 30sec, the program will get two things: the color value the player is currently standing on and the player position
+    
+    Note: I don't know which one would be better for detecting the answer the player has chosen so I'm currently printing both of them to console
+

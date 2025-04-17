@@ -1,0 +1,31 @@
+body {
+    background-color: #1a202c;
+    font-family: sans-serif;
+    color: white;
+    margin: 0;
+    padding: 0;
+}
+h1 {
+    text-align: center;
+}
+
+label{
+    display: block;
+}
+.links {
+  margin-top: 40px;
+  margin-left: 40px;
+}
+
+.links a {
+  display: block;
+  color: #67b3ff;
+  font-size: 18px;
+  text-decoration: none;
+  margin-bottom: 10px;
+}
+
+.links a:hover {
+  color: #22d0d3;
+  text-decoration: underline;
+}
