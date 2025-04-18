@@ -29,3 +29,55 @@ label{
   color: #22d0d3;
   text-decoration: underline;
 }
+
+.top-bar {
+  background-color: #333;
+  overflow: hidden;
+  display: flex;
+  padding: 14px 20px;
+}
+
+.top-bar a {
+  color: white;
+  padding: 14px 20px;
+  text-decoration: none;
+  text-align: center;
+}
+
+.top-bar a:hover {
+  background-color: #575757;
+}
+
+.content {
+  padding: 20px;
+}
+
+.top-bar {
+  background-color: #333;
+  overflow: hidden;
+  display: flex;
+  justify-content: space-between; /* This pushes left and right links apart */
+  align-items: center;
+  padding: 10px 20px;
+}
+
+/* Shared nav link styling */
+.nav-links {
+  display: flex;
+  gap: 20px;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-links li a {
+  color: white;
+  text-decoration: none;
+  padding: 8px 12px;
+}
+
+.nav-links li a:hover {
+  background-color: #575757;
+  border-radius: 4px;
+}
+

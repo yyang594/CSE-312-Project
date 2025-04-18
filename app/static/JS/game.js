@@ -1,8 +1,7 @@
 const canvas = document.getElementById("Canvas");
 const ctx = canvas.getContext("2d");
 
-let playerX = 100;
-let playerY = 100;
+
 const radius = 10;
 const speed = 3;
 
@@ -10,7 +9,8 @@ const keysPressed = new Set();
 
 canvas.height = window.innerHeight * 0.80;
 canvas.width = window.innerWidth * 0.80;
-
+let playerX = canvas.width / 2;
+let playerY = canvas.height / 2;
 //Timer
 //Change maxTime to change countdown
 const timer = document.getElementById("timer")
