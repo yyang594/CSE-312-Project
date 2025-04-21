@@ -8,7 +8,13 @@
     <div id = "questionBox">Insert Question Here</div>
     <span>Timer: </span><span id="timer">00:30</span>
     <br>
-    <canvas id="Canvas"></canvas>
+    <div>
+        <h3 id = "q1" class = "question">Test 1</h3>
+        <h3 id = "q2" class = "question">Test 2</h3>
+        <h3 id = "q3" class = "question">Test 3</h3>
+        <h3 id = "q4" class = "question">Test 4</h3>
+        <canvas id="Canvas"></canvas>
+    </div>
 
     <script src="{{ url_for('static', filename='JS/game.js') }}"></script>
 {% endblock %}

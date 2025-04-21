@@ -1,6 +1,8 @@
 const canvas = document.getElementById("Canvas");
 const ctx = canvas.getContext("2d");
 
+const questionDisplay = document.getElementById("questionBox");
+
 let playerX = 100;
 let playerY = 100;
 const radius = 10;
@@ -8,24 +10,40 @@ const speed = 3;
 
 const keysPressed = new Set();
 
+//Format: [Question]: [Answer1, Answer2, Answer3, Answer4, Solution]
+questionSet = {
+    "What is 1 + 1?": ["1", "2", "3", "4", "2"],
+    "What color is the sky?": ["magenta", "blue", "hot pink", "green", "blue"],
+    "What produces light?": ["Moon", "Concrete", "Leaf", "Sun", "Sun"]
+}
+questionDisplay.innerHTML = getRandomKey(questionSet)
+
 canvas.height = window.innerHeight * 0.80;
 canvas.width = window.innerWidth * 0.80;
 
 //Timer
 //Change maxTime to change countdown
 const timer = document.getElementById("timer")
-var maxTime = 30
+var maxTime = 5
 var totalTime = maxTime
 setInterval(function () {
     totalTime -= 1
     timer.innerHTML = "00:" + totalTime
     if (totalTime == 0){
         totalTime = maxTime
+        questionDisplay.innerHTML = getRandomKey(questionSet)
+
         //Debugging purposes
         console.log(`You are at position: (${playerX},${playerY})`)
         console.log(`You have chosen: (${ctx.getImageData(playerX, playerY, 1, 1).data})`)
     }
 }, 1000);
+
+function getRandomKey(dict) {
+    const keys = Object.keys(dict);
+    const randomIndex = Math.floor(Math.random() * keys.length);
+    return keys[randomIndex];
+}
 
 function drawCircle() {
     ctx.beginPath();
