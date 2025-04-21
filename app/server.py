@@ -1,5 +1,10 @@
-from flask import Flask, jsonify, make_response, redirect, render_template, request, url_for
+from flask import Flask, flash, jsonify, make_response, redirect, render_template, request, url_for
 from flask_socketio import SocketIO, emit, join_room, leave_room
+
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField
+from wtforms.validators import InputRequired, Length, EqualTo, Regexp
+
 import database
 import logging
 import os
@@ -26,6 +31,34 @@ db = database.get_db()
 collection = db['items']
 users_collection = db['users']
 
+#****Protects against CSRF attacks (CHANGE LATER)****
+app.config['SECRET_KEY'] = 'temporary-very-weak-key'
+
+class RegisterForm(FlaskForm):
+    username = StringField('Username', [
+        InputRequired(), 
+        Length(min=4)
+    ])
+    password = PasswordField('Password', [
+        InputRequired(), 
+        Length(min=6, message='Password must be at least 6 characters long'),
+        Regexp(r'^(?=.*\d)(?=.*[A-Z])(?=.*[a-z]).{6,}$', message="Password must contain at least one uppercase letter, one number, and be at least 6 characters long.")
+    ])
+    confirm_password = PasswordField('Confirm Password', [
+        InputRequired(),
+        EqualTo('password', message='Passwords must match')
+    ])
+
+class LoginForm(FlaskForm):
+    username = StringField('Username', [
+        InputRequired(), 
+        Length(min=4)
+    ])
+    password = PasswordField('Password', [
+        InputRequired(), 
+        Length(min=6, message='Incorrect Password')
+    ])
+
 #Routing
 @app.route('/')
 @app.route('/home')
@@ -49,9 +82,10 @@ def game():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
-        username = escape(request.form.get('username'))
-        password = request.form.get('password')
+    form = LoginForm(request.form)
+    if request.method == 'POST' and form.validate():
+        username = escape(form.username.data)
+        password = form.password.data
 
         user = users_collection.find_one({"username": username})
 
@@ -66,16 +100,15 @@ def login():
         response.set_cookie("username", username, httponly=True, secure=True, samesite='Strict')
         response.set_cookie("auth_token", token, httponly=True, secure=True, samesite='Strict', max_age=3600)
         return response
-
-    return render_template('login.html')
-
+    return render_template('login.html', form=form)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    if request.method == 'POST':
-        username = escape(request.form.get("username"))
-        password = request.form.get("password")
-        confirm_password = request.form.get("confirm_password")
+    form = RegisterForm(request.form)
+    if request.method == 'POST' and form.validate():
+        username = escape(form.username.data)
+        password = form.password.data
+        confirm_password = form.confirm_password.data
 
         if users_collection.find_one({"username": username}):
             return jsonify({"success": False, "message": "Username already taken."}), 400
@@ -88,10 +121,10 @@ def register():
             "username": username,
             "password": hashed_pw
         })
-
+        
         return redirect(url_for('home'))
-
-    return render_template('register.html')
+    
+    return render_template('register.html', form=form)
 
 @app.route('/test')
 def test():

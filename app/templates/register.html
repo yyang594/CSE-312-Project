@@ -3,12 +3,25 @@
 {% block content %}
     <h1>REGISTER</h1>
     <form id="registerform" action="/register" method="POST">
+        {{ form.hidden_tag() }}
         <label for="fname">Username:</label>
         <input type="text" id="username" name="username" required><br>
+        {% for error in form.username.errors %}
+            <span class="error">{{ error }}</span><br>
+        {% endfor %}
+
         <label for="lname">Password:</label>
         <input type="password" id="password" name="password" required><br>
+        {% for error in form.password.errors %}
+            <span class="error">{{ error }}</span><br>
+        {% endfor %}
+
         <label for="lname">Confirm Password:</label>
         <input type="password" id="confirmpassword" name="confirm_password" required><br><br>
+        {% for error in form.confirm_password.errors %}
+            <span class="error">{{ error }}</span><br>
+        {% endfor %}
+
         <button type="submit">Register</button>
     </form> 
 {% endblock %}
