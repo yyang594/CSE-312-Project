@@ -4,15 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
-
+    
     <link rel="stylesheet" href="{{ url_for('static', filename='CSS/base.css') }}">
-
-    {% block css_link %}{% endblock %}
+    {% block css_link %}
+    {% endblock %}
 </head>
 <body>
-    <div class="links">
-        <a href="{{ url_for('home') }}">Home</a>
-        {% block content %} {% endblock %}
-    </div>
+    <nav class="top-bar">
+        <ul class="nav-links">
+          <li><a href="{{ url_for('home') }}">Home</a></li>
+          <li><a href="{{ url_for('game') }}">Game</a></li>
+        </ul>
+        <ul class="nav-links">
+          <li><a href="{{ url_for('register') }}">Register</a></li>
+          <li><a href="{{ url_for('login') }}">Login</a></li>
+        </ul>
+      </nav>
+    {% block content %} {% endblock %}
 </body>
 </html>

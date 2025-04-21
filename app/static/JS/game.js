@@ -1,10 +1,21 @@
+const socket = io(); // Connect to WebSocket
+
+let players = {};
+let myId = null;
+
+socket.on("connect", () => {
+    myId = socket.id;
+});
+
+socket.on("player_moved", (data) => {
+    players[data.id] = data;
+});
 const canvas = document.getElementById("Canvas");
 const ctx = canvas.getContext("2d");
 
 const questionDisplay = document.getElementById("questionBox");
 
-let playerX = 100;
-let playerY = 100;
+
 const radius = 10;
 const speed = 3;
 
@@ -20,7 +31,8 @@ questionDisplay.innerHTML = getRandomKey(questionSet)
 
 canvas.height = window.innerHeight * 0.80;
 canvas.width = window.innerWidth * 0.80;
-
+let playerX = canvas.width / 2;
+let playerY = canvas.height / 2;
 //Timer
 //Change maxTime to change countdown
 const timer = document.getElementById("timer")
@@ -55,10 +67,26 @@ function drawCircle() {
 
 //Set will store all currently pressed key and prevent the lag between key switches
 function updatePosition() {
-    if (keysPressed.has("w")) playerY -= speed;
-    if (keysPressed.has("s")) playerY += speed;
-    if (keysPressed.has("a")) playerX -= speed;
-    if (keysPressed.has("d")) playerX += speed;
+    let moved = false;
+    if (keysPressed.has("w")) { playerY -= speed; moved = true; }
+    if (keysPressed.has("s")) { playerY += speed; moved = true; }
+    if (keysPressed.has("a")) { playerX -= speed; moved = true; }
+    if (keysPressed.has("d")) { playerX += speed; moved = true; }
+
+    if (moved) {
+        socket.emit("move", { id: myId, x: playerX, y: playerY });
+    }
+}
+
+function drawPlayers() {
+    for (const id in players) {
+        const p = players[id];
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = "purple";
+        ctx.fill();
+        ctx.stroke();
+    }
 }
 
 document.addEventListener("keydown", (e) => {
@@ -88,12 +116,11 @@ function setUp(){
 
 //Main loop
 function gameLoop() {
-    //Set up game board
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     setUp();
-
     updatePosition();
-    drawCircle();
+    drawPlayers(); // draw others first
+    drawCircle();  // draw self
     requestAnimationFrame(gameLoop);
 }
 

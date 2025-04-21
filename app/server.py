@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, make_response, redirect, render_template, request, url_for
+from flask_socketio import SocketIO, emit, join_room, leave_room
 import database
 import logging
 import os
@@ -19,7 +20,8 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )"""
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', template_folder='templates')
+socketio = SocketIO(app, cors_allowed_origins="*")
 db = database.get_db()
 collection = db['items']
 users_collection = db['users']
@@ -114,5 +116,9 @@ def log_request():
     path = request.path
     logging.info(f"{ip} {method} {path}")
 
+@socketio.on('move')
+def handle_move(data):
+    emit('player_moved', data, broadcast=True, include_self=False)
+
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+    socketio.run(app, host='0.0.0.0', port=8080, allow_unsafe_werkzeug=True)

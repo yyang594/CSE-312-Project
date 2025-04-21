@@ -2,4 +2,4 @@ flask
 pymongo
 python-dotenv
 bcrypt
-wtforms
+wtformsflask-socketio
