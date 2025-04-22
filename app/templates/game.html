@@ -5,21 +5,24 @@
 {% endblock %}
 
 {% block content %}
-    <div id = "questionBox">Insert Question Here</div>
-    <span>Timer: </span><span id="timer">00:30</span>
-    <br>
-    <div>
-        <h3 id = "q1" class = "question">Test 1</h3>
-        <h3 id = "q2" class = "question">Test 2</h3>
-        <h3 id = "q3" class = "question">Test 3</h3>
-        <h3 id = "q4" class = "question">Test 4</h3>
-        <canvas id="Canvas"></canvas>
-    </div>
-    
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <script src="{{ url_for('static', filename='JS/game.js') }}"></script>
+<div id="questionBox">Insert Question Here</div>
+<span>Timer: </span><span id="timer">00:30</span>
+<br>
+<div>
+    <h3 id="q1" class="question">Test 1</h3>
+    <h3 id="q2" class="question">Test 2</h3>
+    <h3 id="q3" class="question">Test 3</h3>
+    <h3 id="q4" class="question">Test 4</h3>
+    <canvas id="Canvas"></canvas>
+</div>
 
 </head>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script src="{{ url_for('static', filename='JS/game.js') }}"></script>
+
+<title>Sidebar Toggle</title>
+
+<link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700" rel="stylesheet">
 
 <div class="wrapper">
   <!-- Sidebar -->
@@ -42,4 +45,96 @@
           <input type="text" id="chatInput" placeholder="Type your message...">
       </div>
   </nav>
+{% endblock %}
+    <div class="sidebar-header">
+      <h3>Bootstrap Sidebar</h3>
+    </div>
+
+    <ul class="list-unstyled components">
+      <p>Player Info</p>
+      <li class="active">
+        <a href="#pageSubmenu" data-toggle="collapse" aria-expanded="false">Profile</a>
+        <ul class="collapse list-unstyled" id="pageSubmenu">
+          <li>
+            <div class="profile-container">
+                <img src="{{ user_pfp | e if user_pfp else '/static/default-pfp.jpg' }}" alt="Profile image" class="pfp" style="width:100px;height:100px;border-radius:50%;">
+                <form id="avatarForm" onsubmit="handleUploadPfp(event)">
+                    <label for="file-upload">Choose a avatar picture (jpg only):</label>
+                    <input type="file" name="avatar" id="file-upload" accept="image/jpg">
+                    <input type="submit" value="Upload">
+                </form>
+            </div>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <a href="#">Chat</a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- Page Content Holder -->
+  <div id="content">
+    <button type="button" id="sidebarCollapse" class="btn btn-info navbar-btn">
+      <i class="glyphicon glyphicon-align-left"></i>
+      <span>Toggle Sidebar</span>
+    </button>
+    <div class="container-fluid">
+      <h1>Insert Game here</h1>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+<script>
+  $(document).ready(function() {
+    $("#sidebarCollapse").on("click", function() {
+      $("#sidebar").toggleClass("active");
+      $(this).toggleClass("active");
+    });
+  });
+
+  function handleUploadPfp(event) {
+    event.preventDefault();
+    const fileInput = document.getElementById('file-upload');
+    const file = fileInput.files[0];
+
+    if (!file) {
+      alert("Please select a JPG image.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    fetch('/upload_avatar', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(result => {
+      if (result.success) {
+        document.querySelector('.pfp').src = result.image_url;
+      } else {
+        alert(result.error);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+    });
+  }
+
+  document.getElementById('file-upload').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.querySelector('.pfp').src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+</script>
 {% endblock %}
