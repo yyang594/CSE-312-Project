@@ -1,35 +1,17 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h1>Question Set Submission</h1>
-    <h2>Enter Your Questions</h2>
-
-  <form id="questionForm" action="/submit" method="POST">
-    <div id="questionContainer">
-      <!-- Questions will appear here -->
+  <h1>Submit Question</h1>
+  <form action="/submit_question" method="POST">
+    <div id="questionsContainer"></div>
+        <!-- Dynamic question blocks will appear here -->
     </div>
-
     <button type="button" onclick="addQuestion()">Add Question</button>
     <br><br>
-    <button type="submit">Submit All Questions</button>
+
+    <input type="submit" value="Submit Question">
   </form>
 
-  <script>
-    let questionCount = 0;
-
-    function addQuestion() {
-      questionCount++;
-      const container = document.getElementById('questionContainer');
-
-      const questionDiv = document.createElement('div');
-      questionDiv.classList.add('question');
-      questionDiv.innerHTML = `
-        <label for="question_${questionCount}">Question ${questionCount}:</label>
-        <input type="text" name="questions[]" id="question_${questionCount}" required>
-      `;
-
-      container.appendChild(questionDiv);
-    }
-  </script>
+  <script src="{{ url_for('static', filename='JS/question_submission.js') }}"></script>
     
 {% endblock %}
