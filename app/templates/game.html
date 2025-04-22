@@ -5,29 +5,24 @@
 {% endblock %}
 
 {% block content %}
-    <div id = "questionBox">Insert Question Here</div>
-    <span>Timer: </span><span id="timer">00:30</span>
-    <br>
-    <div>
-        <h3 id = "q1" class = "question">Test 1</h3>
-        <h3 id = "q2" class = "question">Test 2</h3>
-        <h3 id = "q3" class = "question">Test 3</h3>
-        <h3 id = "q4" class = "question">Test 4</h3>
-        <canvas id="Canvas"></canvas>
-    </div>
-    
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <script src="{{ url_for('static', filename='JS/game.js') }}"></script>
+<div id="questionBox">Insert Question Here</div>
+<span>Timer: </span><span id="timer">00:30</span>
+<br>
+<div>
+    <h3 id="q1" class="question">Test 1</h3>
+    <h3 id="q2" class="question">Test 2</h3>
+    <h3 id="q3" class="question">Test 3</h3>
+    <h3 id="q4" class="question">Test 4</h3>
+    <canvas id="Canvas"></canvas>
+</div>
 
-    <title>Sidebar Toggle</title>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script src="{{ url_for('static', filename='JS/game.js') }}"></script>
 
-<!-- Bootstrap CSS -->
+<title>Sidebar Toggle</title>
 
-
-<!-- Google Fonts -->
 <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700" rel="stylesheet">
 
-</head>
 <div class="wrapper">
   <!-- Sidebar Holder -->
   <nav id="sidebar">
@@ -36,17 +31,25 @@
     </div>
 
     <ul class="list-unstyled components">
-      <p>Dummy Heading</p>
+      <p>Player Info</p>
       <li class="active">
-        <a href="#pageSubmenu" data-toggle="collapse" aria-expanded="false">Player Info</a>
+        <a href="#pageSubmenu" data-toggle="collapse" aria-expanded="false">Profile</a>
         <ul class="collapse list-unstyled" id="pageSubmenu">
-          <li><a href="#">person 1</a></li>
-          <li><a href="#">person 2</a></li>
-          <li><a href="#">person 3</a></li>
+          <li>
+            <div class="profile-container">
+                <img src="{{ user_pfp | e if user_pfp else '/static/default-pfp.jpg' }}" alt="Profile image" class="pfp" style="width:100px;height:100px;border-radius:50%;">
+                <form id="avatarForm" onsubmit="handleUploadPfp(event)">
+                    <label for="file-upload">Choose a avatar picture (jpg only):</label>
+                    <input type="file" name="avatar" id="file-upload" accept="image/jpg">
+                    <input type="submit" value="Upload">
+                </form>
+            </div>
+          </li>
         </ul>
       </li>
       <li>
         <a href="#">Chat</a>
+      </li>
     </ul>
   </nav>
 
@@ -71,6 +74,47 @@
       $("#sidebar").toggleClass("active");
       $(this).toggleClass("active");
     });
+  });
+
+  function handleUploadPfp(event) {
+    event.preventDefault();
+    const fileInput = document.getElementById('file-upload');
+    const file = fileInput.files[0];
+
+    if (!file) {
+      alert("Please select a JPG image.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    fetch('/upload_avatar', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(result => {
+      if (result.success) {
+        document.querySelector('.pfp').src = result.image_url;
+      } else {
+        alert(result.error);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+    });
+  }
+
+  document.getElementById('file-upload').addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.querySelector('.pfp').src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
   });
 </script>
 {% endblock %}

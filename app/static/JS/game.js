@@ -9,6 +9,10 @@ socket.on("connect", () => {
 
 socket.on("player_moved", (data) => {
     players[data.id] = data;
+
+    if (data.id === myId) {
+        players[myId] = data;
+    }
 });
 const canvas = document.getElementById("Canvas");
 const ctx = canvas.getContext("2d");
@@ -63,6 +67,11 @@ function drawCircle() {
     ctx.fillStyle = "teal";
     ctx.fill();
     ctx.stroke();
+
+    ctx.font = "12px Arial";
+    ctx.fillStyle = "black";
+    ctx.textAlign = "center";
+    //ctx.fillText(players[myId]?.name || "Guest", playerX, playerY - radius - 5);
 }
 
 //Set will store all currently pressed key and prevent the lag between key switches
@@ -81,11 +90,21 @@ function updatePosition() {
 function drawPlayers() {
     for (const id in players) {
         const p = players[id];
+
+        //const img = new Image();
+        //img.src = p.image || '/static/uploads/default.jpg';  // Default image fallback
+
+
         ctx.beginPath();
         ctx.arc(p.x, p.y, radius, 0, 2 * Math.PI);
         ctx.fillStyle = "purple";
         ctx.fill();
         ctx.stroke();
+
+        ctx.font = "12px Arial";
+        ctx.fillStyle = "black";
+        ctx.textAlign = "center";
+        ctx.fillText(p.name || "Guest", p.x, p.y + radius + 10);
     }
 }
 

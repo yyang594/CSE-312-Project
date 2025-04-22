@@ -1,9 +1,11 @@
-from flask import Flask, flash, jsonify, make_response, redirect, render_template, request, url_for
+from flask import Flask, flash, jsonify, make_response, redirect, render_template, request, url_for, send_from_directory
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField
 from wtforms.validators import InputRequired, Length, EqualTo, Regexp
+
+from PIL import Image
 
 import database
 import logging
@@ -79,6 +81,8 @@ def home():
 @app.route('/game')
 def game():
     return render_template('game.html')
+
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -162,9 +166,94 @@ def log_request():
     path = request.path
     logging.info(f"{ip} {method} {path}")
 
+player_data = {}
+
 @socketio.on('move')
 def handle_move(data):
-    emit('player_moved', data, broadcast=True, include_self=False)
+    user = player_data.get(request.sid, {})
+    username = user.get('username', 'Guest')
+    profile_image = user.get('profile_image', '/static/uploads/default.jpg')  # Default image
+    
+    data['name'] = username
+    data['image'] = profile_image  # Include the image URL
+    data['id'] = request.sid
+    emit('player_moved', data, broadcast=True, include_self=True)
+
+@socketio.on('connect')
+def handle_connect():
+    auth_token = request.cookies.get('auth_token')
+    username = "Guest"
+
+    if auth_token:
+        token_hash = hashlib.sha256(auth_token.encode()).hexdigest()
+        user = users_collection.find_one({"auth_token": token_hash})
+        if user:
+            username = user['username']
+
+    player_data[request.sid] = {"username": username}
+    print(f"{username} connected with ID {request.sid}")
+
+# --- Set up avatar uploads
+
+UPLOAD_FOLDER = 'static/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def resize_crop_image(image_path, size=(100, 100)):
+    with Image.open(image_path) as img:
+
+        img = img.convert("RGB")
+        width, height = img.size
+        min_dim = min(width, height)
+
+        left = (width - min_dim) / 2
+        top = (height - min_dim) / 2
+        right = (width + min_dim) / 2
+        bottom = (height + min_dim) / 2
+        img = img.crop((left, top, right, bottom))
+
+        img = img.resize(size)
+        img.save(image_path)
+
+@app.route('/upload_avatar', methods=['POST'])
+def upload_avatar():
+    if 'avatar' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    
+    file = request.files['avatar']
+    
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+    
+    if file and allowed_file(file.filename):
+        filename = file.filename
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+        file.save(file_path)
+        
+        resize_crop_image(file_path)
+
+        auth_token = request.cookies.get('auth_token')
+        token_hash = hashlib.sha256(auth_token.encode()).hexdigest()
+        user = users_collection.find_one({"auth_token": token_hash})
+        
+        if user:
+            # Update the user's profile image URL in the database
+            users_collection.update_one(
+                {"auth_token": token_hash},
+                {"$set": {"profile_image": f"/static/uploads/{filename}"}}
+            )
+        
+        return jsonify({"message": "Avatar uploaded successfully", "image_url": f"/static/uploads/{filename}"}), 200
+    
+    return jsonify({"error": "Invalid file type"}), 400
+
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=8080, allow_unsafe_werkzeug=True)
