@@ -19,58 +19,27 @@
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='JS/game.js') }}"></script>
 
-    <title>Sidebar Toggle</title>
-
-<!-- Bootstrap CSS -->
-
-
-<!-- Google Fonts -->
-<link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700" rel="stylesheet">
-
 </head>
+
 <div class="wrapper">
-  <!-- Sidebar Holder -->
+  <!-- Sidebar -->
   <nav id="sidebar">
-    <div class="sidebar-header">
-      <h3>Bootstrap Sidebar</h3>
-    </div>
-
-    <ul class="list-unstyled components">
-      <p>Dummy Heading</p>
-      <li class="active">
-        <a href="#pageSubmenu" data-toggle="collapse" aria-expanded="false">Player Info</a>
-        <ul class="collapse list-unstyled" id="pageSubmenu">
-          <li><a href="#">person 1</a></li>
-          <li><a href="#">person 2</a></li>
-          <li><a href="#">person 3</a></li>
-        </ul>
-      </li>
-      <li>
-        <a href="#">Chat</a>
-    </ul>
+      <div class="sidebar-header">
+          <h3>Players & Chat</h3>
+      </div>
+      <div class="player-list">
+          <div class="player-item">Player 1: <strong>10 pts</strong></div>
+          <div class="player-item">Player 2: <strong>7 pts</strong></div>
+          <div class="player-item">Player 3: <strong>5 pts</strong></div>
+          <!-- Add more players dynamically via JS if needed -->
+      </div>
+      <div id="chatBox">
+          <div id="chatMessages">
+              <!-- Chat messages will go here -->
+              <div><strong>Player 1:</strong> Hello!</div>
+              <div><strong>Player 2:</strong> Good luck!</div>
+          </div>
+          <input type="text" id="chatInput" placeholder="Type your message...">
+      </div>
   </nav>
-
-  <!-- Page Content Holder -->
-  <div id="content">
-    <button type="button" id="sidebarCollapse" class="btn btn-info navbar-btn">
-      <i class="glyphicon glyphicon-align-left"></i>
-      <span>Toggle Sidebar</span>
-    </button>
-    <div class="container-fluid">
-      <h1>Insert Game here</h1>
-    </div>
-  </div>
-</div>
-
-<!-- Scripts -->
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
-<script>
-  $(document).ready(function() {
-    $("#sidebarCollapse").on("click", function() {
-      $("#sidebar").toggleClass("active");
-      $(this).toggleClass("active");
-    });
-  });
-</script>
 {% endblock %}
