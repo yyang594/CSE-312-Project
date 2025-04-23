@@ -19,9 +19,8 @@ const ctx = canvas.getContext("2d");
 
 const questionDisplay = document.getElementById("questionBox");
 
-
 const radius = 10;
-const speed = 3;
+var speed = 3;
 
 const keysPressed = new Set();
 
@@ -31,30 +30,63 @@ questionSet = {
     "What color is the sky?": ["magenta", "blue", "hot pink", "green", "blue"],
     "What produces light?": ["Moon", "Concrete", "Leaf", "Sun", "Sun"]
 }
-questionDisplay.innerHTML = getRandomKey(questionSet)
 
-canvas.height = window.innerHeight * 0.80;
-canvas.width = window.innerWidth * 0.80;
+var currentQuestion = getRandomKey(questionSet)
+questionDisplay.innerHTML = currentQuestion
+var solution = questionSet[currentQuestion].pop()
+var answers = questionSet[currentQuestion]
+var solutionParameter;
+
+canvas.height = window.innerHeight;
+canvas.width = window.innerWidth;
 let playerX = canvas.width / 2;
 let playerY = canvas.height / 2;
+var playerState = "Default"
+
 //Timer
 //Change maxTime to change countdown
 const timer = document.getElementById("timer")
 var maxTime = 5
 var totalTime = maxTime
-setInterval(function () {
+
+let intervalId = setInterval(countdown, 1000);
+
+function countdown() {
     totalTime -= 1
     timer.innerHTML = "00:" + totalTime
     if (totalTime == 0){
         totalTime = maxTime
-        questionDisplay.innerHTML = getRandomKey(questionSet)
+        currentQuestion = getRandomKey(questionSet)
+        questionDisplay.innerHTML = currentQuestion
 
         //Debugging purposes
-        console.log(`You are at position: (${playerX},${playerY})`)
-        console.log(`You have chosen: (${ctx.getImageData(playerX, playerY, 1, 1).data})`)
-    }
-}, 1000);
+        let rectXBound = solutionParameter[0]+solutionParameter[2]
+        let rectYBound = solutionParameter[1]+solutionParameter[3]
 
+        console.log(`You are at position: (${playerX},${playerY})`)
+        ctx.willReadFrequently = true;  //Efficiency (Optional (Solely for getImageData))
+        console.log(`You have chosen: (${ctx.getImageData(playerX, playerY, 1, 1).data})`)
+
+        if(playerX > solutionParameter[0] && playerX < rectXBound && playerY > solutionParameter[1] && playerY < rectYBound){
+            console.log("You got the question right!!!")
+        }
+
+        //Release Player State
+        playerState = "Default"
+    }
+}
+
+function pause() {
+    clearInterval(intervalId);
+    console.log("Timer paused");
+}
+
+function resume() {
+    intervalId = setInterval(countdown, 1000);
+    console.log("Timer resumed");
+}
+
+//This should take in a dict(key) which would be the list of answers and the solution
 function getRandomKey(dict) {
     const keys = Object.keys(dict);
     const randomIndex = Math.floor(Math.random() * keys.length);
@@ -94,7 +126,6 @@ function drawPlayers() {
         //const img = new Image();
         //img.src = p.image || '/static/uploads/default.jpg';  // Default image fallback
 
-
         ctx.beginPath();
         ctx.arc(p.x, p.y, radius, 0, 2 * Math.PI);
         ctx.fillStyle = "purple";
@@ -102,7 +133,7 @@ function drawPlayers() {
         ctx.stroke();
 
         ctx.font = "12px Arial";
-        ctx.fillStyle = "black";
+        ctx.fillStyle = "white";
         ctx.textAlign = "center";
         ctx.fillText(p.name || "Guest", p.x, p.y + radius + 10);
     }
@@ -110,6 +141,21 @@ function drawPlayers() {
 
 document.addEventListener("keydown", (e) => {
     keysPressed.add(e.key.toLowerCase());
+
+    if (e.code === 'Space') {
+        e.preventDefault(); // Prevents scroll
+        console.log('Spacebar pressed!');
+        //Disable everything
+        playerState = "Locked"
+        //Make the avatar slightly green
+
+        // CALCULATE SCORE HERE
+    }
+    if (e.code === 'ShiftLeft'){
+        //Dash
+        console.log("ShiftLeft Pressed")
+        speed = 15
+    }
 });
 
 document.addEventListener("keyup", (e) => {
@@ -117,27 +163,50 @@ document.addEventListener("keyup", (e) => {
 });
 
 function setUp(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
     let rectWidth = canvas.width*0.4
     let rectHeight = canvas.height*0.4
 
-    ctx.fillStyle = "red";
-    ctx.fillRect(0, 0, rectWidth, rectHeight);
+    answers = questionSet[currentQuestion]
+    let rectParemeters = [
+        //Format: NW, NE, SW, SE
+        //Format: [x, y, width, height, textX, textY, color, answer, T/F Solution]
+        [0, 0, rectWidth, rectHeight, rectWidth/2, rectHeight/2, "red", answers[0], solution === answers[0]],
+        [canvas.width-rectWidth, 0, rectWidth, rectHeight, canvas.width-rectWidth + rectWidth/2, rectHeight/2, "blue", answers[1], solution === answers[1]],
+        [0, canvas.height-rectHeight, rectWidth, rectHeight, rectWidth/2, canvas.height-rectHeight + rectHeight/2, "orange", answers[2], solution === answers[2]],
+        [canvas.width-rectWidth, canvas.height-rectHeight, rectWidth, rectHeight, canvas.width-rectWidth + rectWidth/2, canvas.height-rectHeight + rectHeight/2, "green", answers[3], solution === answers[3]]
+    ]
 
-    ctx.fillStyle = "blue";
-    ctx.fillRect(canvas.width-rectWidth, 0, rectWidth, rectHeight);
+    //Format: [x, y, width, height, textX, textY, color, answer]
+    for (let rect = 0; rect < rectParemeters.length; rect++){
+        let currentRect = rectParemeters[rect]
+        ctx.fillStyle = currentRect[6];
+        ctx.fillRect(currentRect[0], currentRect[1], currentRect[2], currentRect[3]);
 
-    ctx.fillStyle = "orange";
-    ctx.fillRect(0, canvas.height-rectHeight, rectWidth, rectHeight);
-    
-    ctx.fillStyle = "green";
-    ctx.fillRect(canvas.width-rectWidth, canvas.height-rectHeight, rectWidth, rectHeight);
+        ctx.fillStyle = "white";
+        ctx.font = '20px sans-serif';
+        ctx.fillText(currentRect[7], currentRect[4], currentRect[5]);
+        
+        //GET PAREMETERS OF CORRECT RECTANGLE
+        if(currentRect[currentRect.length-1] == true){
+            solutionParameter = [currentRect[0], currentRect[1], currentRect[2], currentRect[3]]
+        }
+    }
 }
 
 //Main loop
 function gameLoop() {
+    //Dash functionality
+    if(speed !== 3){
+        speed -= 1
+    }
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     setUp();
-    updatePosition();
+    if(playerState === "Default"){
+        updatePosition();
+    }
     drawPlayers(); // draw others first
     drawCircle();  // draw self
     requestAnimationFrame(gameLoop);

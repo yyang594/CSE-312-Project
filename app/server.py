@@ -5,7 +5,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField
 from wtforms.validators import InputRequired, Length, EqualTo, Regexp
 
-from PIL import Image
+#from PIL import Image
 
 import database
 import logging
@@ -82,8 +82,6 @@ def home():
 def game():
     return render_template('game.html')
 
-
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm(request.form)
@@ -140,8 +138,10 @@ def submit_question():
         #posibleAnswers is a list of all possible answers, each 4 answers correspond to a question in order
         #Note: edge cases: check for no correct answers
         #                  check how many answers are actually submitted
-    
-    return render_template('question_submission.html')
+
+        return render_template('game.html')
+
+    return render_template('question_submission.html', questions=questions)
 
 @app.route('/test')
 def test():
