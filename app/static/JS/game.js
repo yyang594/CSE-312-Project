@@ -82,6 +82,9 @@ function updatePosition() {
     if (keysPressed.has("a")) { playerX -= speed; moved = true; }
     if (keysPressed.has("d")) { playerX += speed; moved = true; }
 
+    playerX = Math.max(radius, Math.min(canvas.width - radius, playerX));
+    playerY = Math.max(radius, Math.min(canvas.height - radius, playerY));
+
     if (moved) {
         socket.emit("move", { id: myId, x: playerX, y: playerY });
     }
