@@ -5,6 +5,7 @@ let myId = null;
 
 socket.on("connect", () => {
     myId = socket.id;
+    socket.emit("join_room", { room: ROOM_ID })
 });
 
 socket.on("player_moved", (data) => {
@@ -86,7 +87,7 @@ function updatePosition() {
     playerY = Math.max(radius, Math.min(canvas.height - radius, playerY));
 
     if (moved) {
-        socket.emit("move", { id: myId, x: playerX, y: playerY });
+        socket.emit("move", { id: myId, x: playerX, y: playerY, room: ROOM_ID });
     }
 }
 

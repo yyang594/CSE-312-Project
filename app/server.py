@@ -17,7 +17,7 @@ import bcrypt
 
 # --- Setup Logging ---
 
-"""LOG_DIR = '/logs'
+LOG_DIR = '/logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
 logging.basicConfig(
@@ -25,7 +25,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='[%(asctime)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
-)"""
+)
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -80,7 +80,8 @@ def home():
 
 @app.route('/game')
 def game():
-    return render_template('game.html')
+    room = request.args.get('room', 'default')
+    return render_template('game.html', room=room)
 
 
 
@@ -170,14 +171,16 @@ player_data = {}
 
 @socketio.on('move')
 def handle_move(data):
-    user = player_data.get(request.sid, {})
-    username = user.get('username', 'Guest')
-    profile_image = user.get('profile_image', '/static/uploads/default.jpg')  # Default image
-    
-    data['name'] = username
-    data['image'] = profile_image  # Include the image URL
-    data['id'] = request.sid
-    emit('player_moved', data, broadcast=True, include_self=True)
+    sid = request.sid
+    user = player_data.get(sid, {})
+    data.update({
+        'name': user.get('username', 'Guest'),
+        'image': user.get('profile_image', '/static/uploads/default.jpg'),
+        'id': sid
+    })
+    room = user.get('room')
+    if room:
+        emit('player_moved', data, room=room)
 
 @socketio.on('connect')
 def handle_connect():
@@ -253,6 +256,34 @@ def upload_avatar():
         return jsonify({"message": "Avatar uploaded successfully", "image_url": f"/static/uploads/{filename}"}), 200
     
     return jsonify({"error": "Invalid file type"}), 400
+
+#Lobby
+rooms = {}
+
+@app.route('/lobby')
+def lobby():
+    return render_template('lobby.html')
+
+
+@socketio.on('join_room')
+def on_join(data):
+    room = data['room']
+    join_room(room)
+    if room not in rooms:
+        rooms[room] = []
+    rooms[room].append(request.sid)
+    player_data[request.sid]['room'] = room
+    emit('joined_room', {'room': room}, room=room)
+
+@socketio.on('disconnect')
+def on_disconnect():
+    sid = request.sid
+    room = player_data.get(sid, {}).get('room')
+    if room and sid in rooms.get(room, []):
+        rooms[room].remove(sid)
+        if not rooms[room]:
+            del rooms[room]
+    player_data.pop(sid, None)
 
 
 if __name__ == '__main__':

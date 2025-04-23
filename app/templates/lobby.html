@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block css_link %}
+<style>
+.container {
+    padding: 20px;
+}
+input, button {
+    padding: 10px;
+    margin: 5px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Game Lobby</h2>
+    <input type="text" id="roomInput" placeholder="Enter Room ID">
+    <button onclick="joinRoom()">Join Room</button>
+    <button onclick="joinRandom()">Join Random Room</button>
+</div>
+
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+  const socket = io();
+
+  function joinRoom() {
+    const roomId = document.getElementById("roomInput").value.trim();
+    if (roomId) {
+      window.location.href = `/game?room=${roomId}`;
+    }
+  }
+
+  function joinRandom() {
+    const roomId = Math.random().toString(36).substr(2, 6);
+    window.location.href = `/game?room=${roomId}`;
+  }
+</script>
+{% endblock %}
