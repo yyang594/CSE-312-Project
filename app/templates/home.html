@@ -1,5 +1,40 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h1>Welcome <u>{{ username }}</u> to the EVIL KAHOOT!</h1>
+  <div class="home-container">
+    <h1>Welcome <u>{{ username }}</u> to <span style="color:red;">EVIL KAHOOT!</span></h1>
+
+    <section class="instructions">
+      <h2>🧠 How to Play</h2>
+      <ul>
+        <li>Each round, a trivia question will appear on screen.</li>
+        <li>You have 30 seconds to choose the correct answer by moving your player into one of the colored zones.</li>
+        <li>Each color represents an answer choice (A, B, C, or D).</li>
+        <li>Points are awarded for correct answers—be quick and accurate!</li>
+      </ul>
+    </section>
+
+    <section class="controls">
+      <h2>🎮 Controls</h2>
+      <p>Use the <strong>W, A, S, D</strong> keys to move your character.</p>
+    </section>
+
+    <section class="game-features">
+      <h2>🔥 Game Features</h2>
+      <ul>
+        <li>Real-time multiplayer action via WebSocket</li>
+        <li>Live chat with other players</li>
+        <li>Upload your avatar for a personalized look</li>
+      </ul>
+    </section>
+
+    <section class="faq">
+      <h2>❓ FAQ</h2>
+      <p><strong>Q: Can I submit my own questions?</strong><br>
+      A: Yes! Head over to the <a href="{{ url_for('submit_question') }}">Submit Question</a> page to add your own.</p>
+
+      <p><strong>Q: How do I earn points?</strong><br>
+      A: You earn points by selecting the correct answer within the time limit.</p>
+    </section>
+  </div>
 {% endblock %}

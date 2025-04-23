@@ -14,6 +14,10 @@
     <canvas id="Canvas"></canvas>
 </div>
 
+</head>
+<script>
+    const ROOM_ID = "{{ room }}";
+</script>
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script src="{{ url_for('static', filename='JS/game.js') }}"></script>
 
@@ -22,8 +26,27 @@
 <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700" rel="stylesheet">
 
 <div class="wrapper">
-  <!-- Sidebar Holder -->
+  <!-- Sidebar -->
   <nav id="sidebar">
+      <div class="sidebar-header">
+          <h3>Players & Chat</h3>
+      </div>
+      <div class="player-list">
+          <div class="player-item">Player 1: <strong>10 pts</strong></div>
+          <div class="player-item">Player 2: <strong>7 pts</strong></div>
+          <div class="player-item">Player 3: <strong>5 pts</strong></div>
+          <!-- Add more players dynamically via JS if needed -->
+      </div>
+      <div id="chatBox">
+          <div id="chatMessages">
+              <!-- Chat messages will go here -->
+              <div><strong>Player 1:</strong> Hello!</div>
+              <div><strong>Player 2:</strong> Good luck!</div>
+          </div>
+          <input type="text" id="chatInput" placeholder="Type your message...">
+      </div>
+  </nav>
+{% endblock %}
     <div class="sidebar-header">
       <h3>Bootstrap Sidebar</h3>
     </div>
@@ -115,4 +138,3 @@
     }
   });
 </script>
-{% endblock %}

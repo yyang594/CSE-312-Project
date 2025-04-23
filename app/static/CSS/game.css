@@ -69,87 +69,42 @@ a, a:hover, a:focus {
 #sidebar.active {
     margin-left: -250px;
 }
-
-#sidebar .sidebar-header {
-    padding: 20px;
-    background: #4a5568;
-}
-
-#sidebar ul.components {
-    padding: 20px 0;
-    border-bottom: 1px solid #718096;
-}
-
-#sidebar ul p {
-    color: #e2e8f0;
+.player-list {
+    flex-grow: 1;
+    overflow-y: auto;
     padding: 10px;
+    background-color: #2d3748;
 }
 
-#sidebar ul li a {
-    padding: 10px;
-    font-size: 1.1em;
-    display: block;
+.player-item {
+    padding: 5px 0;
+    border-bottom: 1px solid #555;
     color: #e2e8f0;
 }
 
-#sidebar ul li a:hover {
-    color: #2d3748;
-    background: #e2e8f0;
+#chatBox {
+    border-top: 1px solid #777;
+    padding: 10px;
+    background-color: #2d3748;
 }
 
-#sidebar ul li.active > a,
-a[aria-expanded="true"] {
-    color: #fff;
-    background: #4a5568;
+#chatMessages {
+    height: 150px;
+    overflow-y: auto;
+    background-color: #1a202c;
+    padding: 10px;
+    margin-bottom: 10px;
+    color: white;
+    font-size: 0.9em;
 }
 
-a[data-toggle="collapse"] {
-    position: relative;
-}
-
-a[aria-expanded="false"]::before,
-a[aria-expanded="true"]::before {
-    content: '\e259';
-    display: block;
-    position: absolute;
-    right: 20px;
-    font-family: 'Glyphicons Halflings';
-    font-size: 0.6em;
-}
-
-a[aria-expanded="true"]::before {
-    content: '\e260';
-}
-
-ul ul a {
-    font-size: 0.9em !important;
-    padding-left: 30px !important;
-    background: #4a5568;
-}
-
-ul.CTAs {
-    padding: 20px;
-}
-
-ul.CTAs a {
-    text-align: center;
-    font-size: 0.9em !important;
-    display: block;
-    border-radius: 5px;
-    margin-bottom: 5px;
-}
-
-a.article,
-a.article:hover {
-    background: #4a5568 !important;
-    color: #fff !important;
-}
-
-#content {
-    padding: 20px;
-    min-height: 100vh;
-    background: #1a202c;
-    transition: all 0.3s;
+#chatInput {
+    width: 100%;
+    padding: 8px;
+    border: none;
+    border-radius: 4px;
+    background-color: #edf2f7;
+    color: #1a202c;
 }
 
 @media (max-width: 768px) {
@@ -158,8 +113,5 @@ a.article:hover {
     }
     #sidebar.active {
         margin-left: 0;
-    }
-    #sidebarCollapse span {
-        display: none;
     }
 }
