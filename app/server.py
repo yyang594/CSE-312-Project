@@ -16,7 +16,7 @@ import hashlib
 import bcrypt
 
 # --- Setup Logging ---
-
+'''
 LOG_DIR = '/logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -26,12 +26,14 @@ logging.basicConfig(
     format='[%(asctime)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+'''
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 socketio = SocketIO(app, cors_allowed_origins="*")
 db = database.get_db()
 collection = db['items']
 users_collection = db['users']
+questions_collection = db['questions']
 
 #****Protects against CSRF attacks (CHANGE LATER)****
 app.config['SECRET_KEY'] = 'temporary-very-weak-key'
@@ -131,24 +133,47 @@ def register():
 
 @app.route('/submit_question', methods=['GET', 'POST'])
 def submit_question():
+    warning = ""
     if request.method == 'POST':
         questions = request.form.getlist('question[]')
         possibleAnswers = request.form.getlist('answer[]')
-        correct_answers = request.form.getlist('correct_answer[]')
+        correct_answer = request.form.getlist('correct_answer[]')
+
+        if questions == []:
+            warning = "Must have at least 1 question"
+            return render_template('question_submission.html', warning=warning)
+        if (possibleAnswers.count(correct_answer[0]) != 1):
+            warning = "Correct answer either does not match any possible answers or matches too many answers"
+            return render_template('question_submission.html', warning=warning)
+
         #Unfortunately the data's pretty ugly but questions/correct_answers is a list of questions/correct_answers
         #posibleAnswers is a list of all possible answers, each 4 answers correspond to a question in order
         #Note: edge cases: check for no correct answers
         #                  check how many answers are actually submitted
+        #questions_collection.insert_one({"question": questions})
 
-        return render_template('game.html')
-
-    return render_template('question_submission.html', questions=questions)
+        #questions_collection.delete_many({})
+        for i in range(len(questions)):
+            toInsert = {
+                "question": questions[i],
+                "answers": [possibleAnswers[0],possibleAnswers[1],possibleAnswers[2],possibleAnswers[3]],
+                "solution": correct_answer[i]
+            }
+            questions_collection.insert_one(toInsert)
+        print("QUESTIONS")
+        for item in questions_collection.find():
+            print(item,flush=True)
+        return redirect(url_for('home'))
+        
+    return render_template('question_submission.html', warning=warning)
 
 @app.route('/test')
 def test():
-    resp = make_response(render_template('home.html'))
-    resp.set_cookie('somecookiename', 'I am cookie')
-    return resp 
+    print("USERS COLLECTION")
+    info = []
+    for item in users_collection.find():
+        info.append(item)
+    return jsonify(info)
 
 @app.route('/items')
 def get_items():
@@ -287,4 +312,5 @@ def on_disconnect():
 
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=8080, allow_unsafe_werkzeug=True)
+    #DELETE DEBUG LATER
+    socketio.run(app, host='0.0.0.0', port=8080, allow_unsafe_werkzeug=True, debug=True)
