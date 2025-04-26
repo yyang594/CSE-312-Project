@@ -130,43 +130,6 @@ def register():
         return redirect(url_for('home'))
     
     return render_template('register.html', form=form)
-
-@app.route('/submit_question', methods=['GET', 'POST'])
-def submit_question():
-    warning = ""
-    if request.method == 'POST':
-        questions = request.form.getlist('question[]')
-        possibleAnswers = request.form.getlist('answer[]')
-        correct_answer = request.form.getlist('correct_answer[]')
-
-        if questions == []:
-            warning = "Must have at least 1 question"
-            return render_template('question_submission.html', warning=warning)
-        if (possibleAnswers.count(correct_answer[0]) != 1):
-            warning = "Correct answer either does not match any possible answers or matches too many answers"
-            return render_template('question_submission.html', warning=warning)
-
-        #Unfortunately the data's pretty ugly but questions/correct_answers is a list of questions/correct_answers
-        #posibleAnswers is a list of all possible answers, each 4 answers correspond to a question in order
-        #Note: edge cases: check for no correct answers
-        #                  check how many answers are actually submitted
-        #questions_collection.insert_one({"question": questions})
-
-        #questions_collection.delete_many({})
-        for i in range(len(questions)):
-            toInsert = {
-                "question": questions[i],
-                "answers": [possibleAnswers[0],possibleAnswers[1],possibleAnswers[2],possibleAnswers[3]],
-                "solution": correct_answer[i]
-            }
-            questions_collection.insert_one(toInsert)
-        print("QUESTIONS")
-        for item in questions_collection.find():
-            print(item,flush=True)
-        return redirect(url_for('home'))
-        
-    return render_template('question_submission.html', warning=warning)
-
 @app.route('/test')
 def test():
     print("USERS COLLECTION")

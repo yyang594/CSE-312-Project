@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Evil Kahoot</title>
     
     <link rel="stylesheet" href="{{ url_for('static', filename='CSS/base.css') }}">
     {% block css_link %}
@@ -15,7 +15,6 @@
           <li><a href="{{ url_for('home') }}">Home</a></li>
           <li><a href="{{ url_for('game') }}">Game</a></li>
           <li><a href="{{ url_for('lobby') }}">Lobby</a></li>
-          <li><a href="{{ url_for('submit_question') }}">Submit Question</a></li>
         </ul>
         <ul class="nav-links">
           <li><a href="{{ url_for('register') }}">Register</a></li>
