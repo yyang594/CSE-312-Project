@@ -41,6 +41,7 @@ questionDisplay.innerHTML = currentQuestion
 var solution = questionSet[currentQuestion].pop()
 var answers = questionSet[currentQuestion]
 var solutionParameter;
+var isGameRunning = true;
 
 canvas.height = window.innerHeight;
 canvas.width = window.innerWidth;
@@ -75,7 +76,14 @@ function countdown() {
         if(playerX > solutionParameter[0] && playerX < rectXBound && playerY > solutionParameter[1] && playerY < rectYBound){
             console.log("You got the question right!!!")
         }
+        console.log(currentQuestion)
+        delete questionSet[currentQuestion];
+        console.log(questionSet)
 
+        if(questionSet == []){
+            //End the game
+            isGameRunning = False
+        }
         //Release Player State
         playerState = "Default"
     }
@@ -226,15 +234,37 @@ function setUp(){
     }
 }
 
+function endScreen(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    // Create gradient
+    const gradient = ctx.createLinearGradient(0, 0, c.width, 0);
+    gradient.addColorStop("0", "magenta");
+    gradient.addColorStop("0.5", "blue");
+    gradient.addColorStop("1.0", "red");
+
+    // Fill with gradient
+    ctx.fillStyle = gradient;
+    ctx.fillText("You Win!", 10, 90);
+}
+
 //Main loop
 function gameLoop() {
+    //Has game ended
+    if(!isGameRunning){
+        endScreen()
+        return;
+    }
     //Dash functionality
     if(speed !== 3){
         speed -= 1
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setUp();
+    if(currentQuestion != undefined){
+        setUp();
+    }
     if(playerState === "Default"){
         updatePosition();
     }
