@@ -67,16 +67,12 @@ function startTimer() {
 }
 
 function countdown() {
-    if (playerState === "Locked") {
-        return; // Stop timer if player has locked
-    }
-
     totalTime -= 1;
     updateTimerDisplay();
 
     if (totalTime <= 0) {
         clearInterval(intervalId);
-        playerState = "Default";
+        playerState = "Default"; // Reset player lock state
         askNewQuestion();
         startTimer();
     }

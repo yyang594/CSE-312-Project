@@ -5,7 +5,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField
 from wtforms.validators import InputRequired, Length, EqualTo, Regexp
 
-#from PIL import Image
+# from PIL import Image
 import requests
 import database
 import logging
@@ -16,7 +16,7 @@ import hashlib
 import bcrypt
 
 # --- Setup Logging ---
-"""
+
 LOG_DIR = '/logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -26,7 +26,6 @@ logging.basicConfig(
     format='[%(asctime)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-"""
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -36,39 +35,43 @@ users_collection = db['users']
 questions_collection = db['questions']
 player_collection = db['players']
 
-#****Protects against CSRF attacks (CHANGE LATER)****
+# ****Protects against CSRF attacks (CHANGE LATER)****
 app.config['SECRET_KEY'] = 'temporary-very-weak-key'
+
 
 class RegisterForm(FlaskForm):
     username = StringField('Username', [
-        InputRequired(), 
+        InputRequired(),
         Length(min=4)
     ])
     password = PasswordField('Password', [
-        InputRequired(), 
+        InputRequired(),
         Length(min=6, message='Password must be at least 6 characters long'),
-        Regexp(r'^(?=.*\d)(?=.*[A-Z])(?=.*[a-z]).{6,}$', message="Password must contain at least one uppercase letter, one number, and be at least 6 characters long.")
+        Regexp(r'^(?=.*\d)(?=.*[A-Z])(?=.*[a-z]).{6,}$',
+               message="Password must contain at least one uppercase letter, one number, and be at least 6 characters long.")
     ])
     confirm_password = PasswordField('Confirm Password', [
         InputRequired(),
         EqualTo('password', message='Passwords must match')
     ])
 
+
 class LoginForm(FlaskForm):
     username = StringField('Username', [
-        InputRequired(), 
+        InputRequired(),
         Length(min=4)
     ])
     password = PasswordField('Password', [
-        InputRequired(), 
+        InputRequired(),
         Length(min=6, message='Incorrect Password')
     ])
 
-#Routing
+
+# Routing
 @app.route('/')
 @app.route('/home')
 def home():
-    #Note to self: grab username from db and replace variable with it to display name
+    # Note to self: grab username from db and replace variable with it to display name
     auth_token = request.cookies.get('auth_token')
     username = "Guest"
 
@@ -81,10 +84,12 @@ def home():
 
     return render_template('home.html', username=username)
 
+
 @app.route('/game')
 def game():
     room = request.args.get('room', 'default')
     return render_template('game.html', room=room)
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -108,6 +113,7 @@ def login():
         return response
     return render_template('login.html', form=form)
 
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm(request.form)
@@ -127,10 +133,12 @@ def register():
             "username": username,
             "password": hashed_pw
         })
-        
+
         return redirect(url_for('home'))
-    
+
     return render_template('register.html', form=form)
+
+
 @app.route('/test')
 def test():
     print("USERS COLLECTION")
@@ -139,15 +147,18 @@ def test():
         info.append(item)
     return jsonify(info)
 
+
 @app.route('/items')
 def get_items():
     items = list(collection.find({}, {'_id': 0}))
     return jsonify(items)
 
+
 @app.route('/add-item')
 def add_item():
     collection.insert_one({"name": "Test Item"})
     return jsonify({"status": "item added"})
+
 
 @app.before_request
 def log_request():
@@ -156,7 +167,9 @@ def log_request():
     path = request.path
     logging.info(f"{ip} {method} {path}")
 
+
 player_data = {}
+
 
 @socketio.on('move')
 def handle_move(data):
@@ -170,6 +183,7 @@ def handle_move(data):
     room = user.get('room')
     if room:
         emit('player_moved', data, room=room)
+
 
 @socketio.on('connect')
 def handle_connect():
@@ -185,6 +199,7 @@ def handle_connect():
     player_data[request.sid] = {"username": username}
     print(f"{username} connected with ID {request.sid}")
 
+
 # --- Set up avatar uploads
 
 UPLOAD_FOLDER = 'static/uploads'
@@ -193,14 +208,13 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-
-#Lobby
+# Lobby
 rooms = {}
 room_questions = {}
 player_ready = {}
 
 
-#https://opentdb.com/api.php?amount=${amount}&category=18&difficulty=medium&type=multiple
+# https://opentdb.com/api.php?amount=${amount}&category=18&difficulty=medium&type=multiple
 def fetch_trivia_questions(amount=10):
     response = requests.get(f"https://opentdb.com/api.php?amount={amount}&category=18&difficulty=medium&type=multiple")
     data = response.json()
@@ -264,5 +278,5 @@ def on_disconnect():
 
 
 if __name__ == '__main__':
-    #DELETE DEBUG LATER
+    # DELETE DEBUG LATER
     socketio.run(app, host='0.0.0.0', port=8080, allow_unsafe_werkzeug=True, debug=False)
