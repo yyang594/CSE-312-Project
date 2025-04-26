@@ -162,6 +162,8 @@ function setUp() {
 
         ctx.fillStyle = "white";
         ctx.font = '20px sans-serif';
+        ctx.textAlign = "center";      // ADDED THIS
+        ctx.textBaseline = "middle";   // ANDED THIS
         ctx.fillText(rect[7], rect[4], rect[5]);
 
         if (rect[8]) {
