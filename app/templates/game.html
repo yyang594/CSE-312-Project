@@ -8,34 +8,25 @@
 
   <div id="questionBox">Insert Question Here</div>
   <span>Timer: </span><span id="timer">00:30</span>
-  <button onclick="readyUp()">Ready</button>
+  <button class="readyButton" id="readyButton" onclick="readyUp()">Ready</button>
   <br>
   <div>
     <div class="wrapper">
       <!-- Sidebar -->
       <nav id="sidebar">
         <div class="sidebar-header">
-            <h3>Players & Chat</h3>
+            <h3>Players Info</h3>
         </div>
         <div class="dropdown">
           <button class="dropbtn">Player Points ▼</button>
           <div class="player-list">
             <ul id="player-list">
-
             </ul>
           </div>
         </div>
-    
-        <div id="chatBox">
-            <div id="chatMessages">
-                <!-- Chat messages will go here -->
-                
-            </div>
-            <input type="text" id="chatInput" placeholder="Type your message...">
-        </div>
         <ul class="list-unstyled components">
           <li class="active">
-            <a href="#pageSubmenu" data-toggle="collapse" aria-expanded="false">Profile</a>
+            <a data-toggle="collapse" aria-expanded="false">Profile</a>
             <ul class="collapse list-unstyled" id="pageSubmenu">
               <li>
                 <div class="profile-container">
@@ -48,9 +39,6 @@
                 </div>
               </li>
             </ul>
-          </li>
-          <li>
-            <a href="#">Chat</a>
           </li>
         </ul>
       </nav>

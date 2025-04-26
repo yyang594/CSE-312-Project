@@ -163,6 +163,8 @@ function setUp() {
 
         ctx.fillStyle = "white";
         ctx.font = '20px sans-serif';
+        ctx.textAlign = "center";      // ADDED THIS
+        ctx.textBaseline = "middle";   // ANDED THIS
         ctx.fillText(rect[7], rect[4], rect[5]);
 
         if (rect[8]) {
@@ -232,4 +234,10 @@ document.addEventListener("keyup", (e) => {
 
 function readyUp() {
     socket.emit('player_ready', { room: ROOM_ID });
+    console.log("Ready pressed!");
+
+    const button = document.getElementById("readyButton");
+    if (button) {
+        button.remove();
+    }
 }
