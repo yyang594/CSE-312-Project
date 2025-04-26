@@ -5,85 +5,73 @@
 {% endblock %}
 
 {% block content %}
-<div id="questionBox">Insert Question Here</div>
-<span>Timer: </span><span id="timer">00:30</span>
-<button onclick="pause()">Pause</button>
-<button onclick="resume()">Resume</button>
-<br>
-<div>
-    <canvas id="Canvas"></canvas>
-</div>
 
-</head>
-<script>
-    const ROOM_ID = "{{ room }}";
-</script>
-<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-<script src="{{ url_for('static', filename='JS/game.js') }}"></script>
-
-<title>Sidebar Toggle</title>
-
-<link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700" rel="stylesheet">
-
-<div class="wrapper">
-  <!-- Sidebar -->
-  <nav id="sidebar">
-      <div class="sidebar-header">
-          <h3>Players & Chat</h3>
-      </div>
-      <div class="player-list">
-        {% for player in players %}
-            <div class="player-item">{{ player.username }}: <strong>{{ player.score }} pts</strong></div>
-        {% endfor %}
-      </div>
-      <div id="chatBox">
-          <div id="chatMessages">
-              <!-- Chat messages will go here -->
-              <div><strong>Player 1:</strong> Hello!</div>
-              <div><strong>Player 2:</strong> Good luck!</div>
+  <div id="questionBox">Insert Question Here</div>
+  <span>Timer: </span><span id="timer">00:30</span>
+  <button onclick="pause()">Pause</button>
+  <button onclick="resume()">Resume</button>
+  <br>
+  <div>
+    <div class="wrapper">
+      <!-- Sidebar -->
+      <nav id="sidebar">
+        <div class="sidebar-header">
+            <h3>Players & Chat</h3>
+        </div>
+        <div class="dropdown">
+          <button class="dropbtn">Player Points ▼</button>
+          <div class="player-list">
+            {% for player in players %}
+                <div class="player-item">{{ player.username }}: <strong>{{ player.score }} pts</strong></div>
+            {% endfor %}
           </div>
-          <input type="text" id="chatInput" placeholder="Type your message...">
-      </div>
-  </nav>
-{% endblock %}
-    <div class="sidebar-header">
-      <h3>Bootstrap Sidebar</h3>
-    </div>
-
-    <ul class="list-unstyled components">
-      <p>Player Info</p>
-      <li class="active">
-        <a href="#pageSubmenu" data-toggle="collapse" aria-expanded="false">Profile</a>
-        <ul class="collapse list-unstyled" id="pageSubmenu">
-          <li>
-            <div class="profile-container">
-                <img src="{{ user_pfp | e if user_pfp else '/static/default-pfp.jpg' }}" alt="Profile image" class="pfp" style="width:100px;height:100px;border-radius:50%;">
-                <form id="avatarForm" onsubmit="handleUploadPfp(event)">
-                    <label for="file-upload">Choose a avatar picture (jpg only):</label>
-                    <input type="file" name="avatar" id="file-upload" accept="image/jpg">
-                    <input type="submit" value="Upload">
-                </form>
+        </div>
+    
+        <div id="chatBox">
+            <div id="chatMessages">
+                <!-- Chat messages will go here -->
+                
             </div>
+            <input type="text" id="chatInput" placeholder="Type your message...">
+        </div>
+        <ul class="list-unstyled components">
+          <li class="active">
+            <a href="#pageSubmenu" data-toggle="collapse" aria-expanded="false">Profile</a>
+            <ul class="collapse list-unstyled" id="pageSubmenu">
+              <li>
+                <div class="profile-container">
+                    <img src="{{ user_pfp | e if user_pfp else '/static/default-pfp.jpg' }}" alt="Profile image" class="pfp" style="width:100px;height:100px;border-radius:50%;">
+                    <form id="avatarForm" onsubmit="handleUploadPfp(event)">
+                        <label for="file-upload">Choose a avatar picture (jpg only):</label>
+                        <input type="file" name="avatar" id="file-upload" accept="image/jpg">
+                        <input type="submit" value="Upload">
+                    </form>
+                </div>
+              </li>
+            </ul>
+          </li>
+          <li>
+            <a href="#">Chat</a>
           </li>
         </ul>
-      </li>
-      <li>
-        <a href="#">Chat</a>
-      </li>
-    </ul>
-  </nav>
-
-  <!-- Page Content Holder -->
-  <div id="content">
-    <button type="button" id="sidebarCollapse" class="btn btn-info navbar-btn">
-      <i class="glyphicon glyphicon-align-left"></i>
-      <span>Toggle Sidebar</span>
-    </button>
-    <div class="container-fluid">
-      <h1>Insert Game here</h1>
+      </nav>
+      
+      <canvas id="Canvas"></canvas>
     </div>
   </div>
-</div>
+
+  </head>
+  <script>
+      const ROOM_ID = "{{ room }}";
+  </script>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script src="{{ url_for('static', filename='JS/game.js') }}"></script>
+
+  <title>Sidebar Toggle</title>
+
+  <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700" rel="stylesheet">
+
+{% endblock %}
 
 <!-- Scripts -->
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
