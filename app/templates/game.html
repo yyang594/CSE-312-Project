@@ -8,8 +8,6 @@
 
   <div id="questionBox">Insert Question Here</div>
   <span>Timer: </span><span id="timer">00:30</span>
-  <button onclick="pause()">Pause</button>
-  <button onclick="resume()">Resume</button>
   <br>
   <div>
     <div class="wrapper">
@@ -21,9 +19,9 @@
         <div class="dropdown">
           <button class="dropbtn">Player Points ▼</button>
           <div class="player-list">
-            {% for player in players %}
-                <div class="player-item">{{ player.username }}: <strong>{{ player.score }} pts</strong></div>
-            {% endfor %}
+            <ul id="player-list">
+
+            </ul>
           </div>
         </div>
     

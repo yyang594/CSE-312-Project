@@ -18,7 +18,6 @@ socket.on("player_moved", (data) => {
     }
 });
 
-
 const canvas = document.getElementById("Canvas");
 const ctx = canvas.getContext("2d");
 
@@ -52,7 +51,7 @@ var playerState = "Default"
 //Timer
 //Change maxTime to change countdown
 const timer = document.getElementById("timer")
-var maxTime = 5
+var maxTime = 30
 var totalTime = maxTime
 
 let intervalId = setInterval(countdown, 1000);
@@ -88,16 +87,6 @@ function countdown() {
         //Release Player State
         playerState = "Default"
     }
-}
-
-function pause() {
-    clearInterval(intervalId);
-    console.log("Timer paused");
-}
-
-function resume() {
-    intervalId = setInterval(countdown, 1000);
-    console.log("Timer resumed");
 }
 
 //This should take in a dict(key) which would be the list of answers and the solution
