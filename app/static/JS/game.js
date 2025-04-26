@@ -233,4 +233,10 @@ document.addEventListener("keyup", (e) => {
 
 function readyUp() {
     socket.emit('player_ready', { room: ROOM_ID });
+    console.log("Ready pressed!");
+
+    const button = document.getElementById("readyButton");
+    if (button) {
+        button.remove();
+    }
 }
