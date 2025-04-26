@@ -138,6 +138,16 @@ def register():
 
     return render_template('register.html', form=form)
 
+@socketio.on('request_next_question')
+def handle_request_next_question(data):
+    room = data['room']
+    questions = lobbies.get(room, {}).get('questions', [])
+
+    if questions:
+        next_question = questions.pop(0)  # Get and remove the next question
+        socketio.emit('next_question', next_question, room=room)
+    else:
+        print(f"No more questions left in room {room}.")
 
 @app.route('/test')
 def test():
@@ -209,9 +219,9 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Lobby
-rooms = {}
-room_questions = {}
-player_ready = {}
+lobbies = {}
+# room_questions = {}
+# player_ready = {}
 
 
 # https://opentdb.com/api.php?amount=${amount}&category=18&difficulty=medium&type=multiple
@@ -248,32 +258,48 @@ def lobby():
 def handle_join(data):
     room = data['room']
     join_room(room)
-    if room not in room_questions:
-        room_questions[room] = []  # Placeholder, we'll fetch questions later
-        player_ready[room] = {}
-    player_ready[room][request.sid] = False  # Mark player as not ready
+
+    if room not in lobbies:
+        lobbies[room] = {'players': {}, 'questions': []}
+
+    username = player_data[request.sid].get('username', 'Guest')
+    lobbies[room]['players'][request.sid] = {'username': username, 'ready': False}
+
+    player_data[request.sid]['room'] = room
+
+    emit('update_lobby', lobbies[room]['players'], room=room)
 
 
 @socketio.on('player_ready')
 def handle_player_ready(data):
     room = data['room']
-    player_ready[room][request.sid] = True
-    total_players = len(player_ready[room])
-    ready_players = sum(1 for ready in player_ready[room].values() if ready)
-    if ready_players / total_players >= 0.5:  # Majority ready
-        if not room_questions[room]:  # Fetch if not already fetched
-            room_questions[room] = fetch_trivia_questions()
-        socketio.emit('start_game', {'questions': room_questions[room]}, room=room)
+    lobbies[room]['players'][request.sid]['ready'] = True
+
+    players = lobbies[room]['players']
+    total_players = len(players)
+    ready_players = sum(1 for p in players.values() if p['ready'])
+
+    if ready_players / total_players >= 0.5:
+        if not lobbies[room]['questions']:
+            lobbies[room]['questions'] = fetch_trivia_questions()
+        socketio.emit('start_game', {'questions': lobbies[room]['questions']}, room=room)
 
 
 @socketio.on('disconnect')
 def on_disconnect():
     sid = request.sid
     room = player_data.get(sid, {}).get('room')
-    if room and sid in rooms.get(room, []):
-        rooms[room].remove(sid)
-        if not rooms[room]:
-            del rooms[room]
+
+    if room and room in lobbies and sid in lobbies[room]['players']:
+        del lobbies[room]['players'][sid]
+
+        # Optional: broadcast updated lobby
+        emit('update_lobby', lobbies[room]['players'], room=room)
+
+        # Clean up empty rooms
+        if not lobbies[room]['players']:
+            del lobbies[room]
+
     player_data.pop(sid, None)
 
 
