@@ -221,22 +221,6 @@ def handle_connect():
     player_data[request.sid] = {"username": username}
     print(f"{username} connected with ID {request.sid}")
 
-
-@socketio.on('join_room')
-def on_join(data):
-    room = data['room']
-    username = data['username']
-
-    player = player_collection.find_one({"username": username})
-
-    if not player:
-        player_collection.insert_one({"username": username, "score": 0, "room": room})
-
-    players_in_room = player_collection.find({"room": room})
-    player_list = [{"username": player['username'], "score": player['score']} for player in players_in_room]
-
-    emit('update_player_list', player_list, room=room)
-
 # --- Set up avatar uploads
 
 UPLOAD_FOLDER = 'static/uploads'
@@ -245,58 +229,6 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def resize_crop_image(image_path, size=(100, 100)):
-    with Image.open(image_path) as img:
-
-        img = img.convert("RGB")
-        width, height = img.size
-        min_dim = min(width, height)
-
-        left = (width - min_dim) / 2
-        top = (height - min_dim) / 2
-        right = (width + min_dim) / 2
-        bottom = (height + min_dim) / 2
-        img = img.crop((left, top, right, bottom))
-
-        img = img.resize(size)
-        img.save(image_path)
-
-@app.route('/upload_avatar', methods=['POST'])
-def upload_avatar():
-    if 'avatar' not in request.files:
-        return jsonify({"error": "No file part"}), 400
-    
-    file = request.files['avatar']
-    
-    if file.filename == '':
-        return jsonify({"error": "No selected file"}), 400
-    
-    if file and allowed_file(file.filename):
-        filename = file.filename
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-
-        file.save(file_path)
-        
-        resize_crop_image(file_path)
-
-        auth_token = request.cookies.get('auth_token')
-        token_hash = hashlib.sha256(auth_token.encode()).hexdigest()
-        user = users_collection.find_one({"auth_token": token_hash})
-        
-        if user:
-            # Update the user's profile image URL in the database
-            users_collection.update_one(
-                {"auth_token": token_hash},
-                {"$set": {"profile_image": f"/static/uploads/{filename}"}}
-            )
-        
-        return jsonify({"message": "Avatar uploaded successfully", "image_url": f"/static/uploads/{filename}"}), 200
-    
-    return jsonify({"error": "Invalid file type"}), 400
 
 #Lobby
 rooms = {}
