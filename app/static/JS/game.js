@@ -20,6 +20,7 @@ socket.on("player_moved", (data) => {
 
 const canvas = document.getElementById("Canvas");
 const ctx = canvas.getContext("2d");
+let isGameRunning = true
 
 const questionDisplay = document.getElementById("questionBox");
 
@@ -29,11 +30,7 @@ var speed = 3;
 const keysPressed = new Set();
 
 //Format: [Question]: [Answer1, Answer2, Answer3, Answer4, Solution]
-questionSet = {
-    // "What is 1 + 1?": ["1", "2", "3", "4", "2"],
-    // "What color is the sky?": ["magenta", "blue", "hot pink", "green", "blue"],
-    // "What produces light?": ["Moon", "Concrete", "Leaf", "Sun", "Sun"]
-}
+questionSet = {}
 async function fetchTriviaQuestions(amount = 10) {
     try {
         const response = await fetch(`https://opentdb.com/api.php?amount=${amount}&type=multiple`);
@@ -107,7 +104,7 @@ function startTimer() {
     clearInterval(intervalId); // Clear old timer if it exists
 
     const timerElement = document.getElementById("timer");
-    let totalTime = 30;
+    let totalTime = 5;
 
     timerElement.innerHTML = `00:${totalTime}`;
 
@@ -117,18 +114,28 @@ function startTimer() {
 
         if (totalTime <= 0) {
             clearInterval(intervalId);
-            askNewQuestion();  // Ask new question
+
+            //Delete question from set
+            delete questionSet[currentQuestion]
+            console.log(JSON.stringify(questionSet, null, 2));  // Indentation of 2 spaces
+            
+            if(questionSet != {}){
+                askNewQuestion();  // Ask new 
+            }
             playerState = "Default"
             startTimer();      // Restart timer for new question
         }
+
+        if (currentQuestion == undefined){
+            //Endgame
+            isGameRunning = false
+        }
+
+
+        
     }, 1000);
 }
 
-
-// var currentQuestion = getRandomKey(questionSet)
-// questionDisplay.innerHTML = currentQuestion
-// var solution = questionSet[currentQuestion].pop()
-// var answers = questionSet[currentQuestion]
 var solutionParameter;
 
 canvas.height = window.innerHeight;
@@ -136,39 +143,6 @@ canvas.width = window.innerWidth;
 let playerX = canvas.width / 2;
 let playerY = canvas.height / 2;
 var playerState = "Default"
-
-//Timer
-//Change maxTime to change countdown
-const timer = document.getElementById("timer")
-var maxTime = 30
-var totalTime = maxTime
-//
-// let intervalId = setInterval(countdown, 1000);
-//
-// function countdown() {
-//     totalTime -= 1
-//     timer.innerHTML = "00:" + totalTime
-//     if (totalTime == 0){
-//         totalTime = maxTime
-//         currentQuestion = getRandomKey(questionSet)
-//         questionDisplay.innerHTML = currentQuestion
-//
-//         //Debugging purposes
-//         let rectXBound = solutionParameter[0]+solutionParameter[2]
-//         let rectYBound = solutionParameter[1]+solutionParameter[3]
-//
-//         console.log(`You are at position: (${playerX},${playerY})`)
-//         ctx.willReadFrequently = true;  //Efficiency (Optional (Solely for getImageData))
-//         console.log(`You have chosen: (${ctx.getImageData(playerX, playerY, 1, 1).data})`)
-//
-//         if(playerX > solutionParameter[0] && playerX < rectXBound && playerY > solutionParameter[1] && playerY < rectYBound){
-//             console.log("You got the question right!!!")
-//         }
-//
-//         //Release Player State
-//         playerState = "Default"
-//     }
-// }
 
 //This should take in a dict(key) which would be the list of answers and the solution
 function getRandomKey(dict) {
@@ -244,15 +218,11 @@ document.addEventListener("keydown", (e) => {
         elapsed = Math.min(elapsed, maxTime);
 
         // CALCULATE SCORE HERE
-
-        elapsed = Math.min(elapsed, MAX_TIME);
-
-        // CALCULATE SCORE HERE
-        let currentScore = Math.round(MAX_SCORE * ((MAX_TIME - elapsed) / MAX_TIME));
+        let currentScore = Math.round(MAX_SCORE * ((maxTime - elapsed) / maxTime));
         currentScore = Math.max(currentScore, 0); // no negative scores
 
-        score += currentScore;
-        console.log(`Scored ${currentScore} points! Total Score: ${score}`);
+        toAdd += currentScore;
+        //console.log(`Scored ${currentScore} points! Total Score: ${score}`);
 
         document.getElementById("scoreDisplay").innerText = score;
 
@@ -293,24 +263,45 @@ function setUp(){
     ]
 
     //Format: [x, y, width, height, textX, textY, color, answer]
-    for (let rect = 0; rect < rectParemeters.length; rect++){
-        let currentRect = rectParemeters[rect]
+    for (let rect = 0; rect < rectParemeters.length; rect++) {
+        let currentRect = rectParemeters[rect];
         ctx.fillStyle = currentRect[6];
         ctx.fillRect(currentRect[0], currentRect[1], currentRect[2], currentRect[3]);
-
+    
         ctx.fillStyle = "white";
         ctx.font = '20px sans-serif';
+        ctx.textAlign = "center";      // ADDED THIS
+        ctx.textBaseline = "middle";   // ANDED THIS
         ctx.fillText(currentRect[7], currentRect[4], currentRect[5]);
         
-        //GET PAREMETERS OF CORRECT RECTANGLE
-        if(currentRect[currentRect.length-1] == true){
-            solutionParameter = [currentRect[0], currentRect[1], currentRect[2], currentRect[3]]
+        if (currentRect[currentRect.length-1] == true) {
+            solutionParameter = [currentRect[0], currentRect[1], currentRect[2], currentRect[3]];
         }
     }
 }
 
+function endScreen(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Create gradient
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+    gradient.addColorStop("0", "magenta");
+    gradient.addColorStop("0.5", "blue");
+    gradient.addColorStop("1.0", "red");
+
+    // Fill with gradient
+    ctx.fillStyle = gradient;
+    ctx.font = "48px Arial";
+    ctx.fillText("You Win!", 40, 90);
+}
+
 //Main loop
 function gameLoop() {
+    if(!isGameRunning){
+        endScreen()
+        return
+    }
     //Dash functionality
     if(speed !== 3){
         speed -= 1
