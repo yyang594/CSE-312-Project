@@ -46,13 +46,18 @@ canvas.height = window.innerHeight;
 canvas.width = window.innerWidth;
 let playerX = canvas.width / 2;
 let playerY = canvas.height / 2;
-var playerState = "Default"
+var playerState = "Default";
+var rectXBound, rectYBound;
+var playerScore = 0;
 
 //Timer
 //Change maxTime to change countdown
 const timer = document.getElementById("timer")
-var maxTime = 30
+var maxTime = 5
 var totalTime = maxTime
+
+//For adding score to total
+var toAdd = 0
 
 let intervalId = setInterval(countdown, 1000);
 
@@ -62,17 +67,19 @@ function countdown() {
     if (totalTime == 0){
         totalTime = maxTime
 
-        //Debugging purposes
-        let rectXBound = solutionParameter[0]+solutionParameter[2]
-        let rectYBound = solutionParameter[1]+solutionParameter[3]
+        rectXBound = solutionParameter[0]+solutionParameter[2]
+        rectYBound = solutionParameter[1]+solutionParameter[3]
 
         //console.log(`You are at position: (${playerX},${playerY})`)
         ctx.willReadFrequently = true;  //Efficiency (Optional (Solely for getImageData))
         //console.log(`You have chosen: (${ctx.getImageData(playerX, playerY, 1, 1).data})`)
-
         if(playerX > solutionParameter[0] && playerX < rectXBound && playerY > solutionParameter[1] && playerY < rectYBound){
-            console.log("You got the question right!!!")
+            score += toAdd
+            console.log(`Your score is ${score}`)
         }
+
+        toAdd = 0
+
 
         delete questionSet[currentQuestion];
         
@@ -153,21 +160,21 @@ document.addEventListener("keydown", (e) => {
         //Disable everything
         playerState = "Locked"
         //Make the avatar slightly green
-
+        
+        //UNDO LATER
         document.getElementById('avatar').style.filter = 'hue-rotate(90deg)';
 
         let elapsed = (Date.now() - startTime) / 1000; // seconds
-        const MAX_TIME = 10; // 10 seconds to get full points
         const MAX_SCORE = 1000;
 
-        elapsed = Math.min(elapsed, MAX_TIME);
+        elapsed = Math.min(elapsed, maxTime);
 
         // CALCULATE SCORE HERE
-        let currentScore = Math.round(MAX_SCORE * ((MAX_TIME - elapsed) / MAX_TIME));
+        let currentScore = Math.round(MAX_SCORE * ((maxTime - elapsed) / maxTime));
         currentScore = Math.max(currentScore, 0); // no negative scores
 
-        score += currentScore;
-        console.log(`Scored ${currentScore} points! Total Score: ${score}`);
+        toAdd += currentScore;
+        //console.log(`Scored ${currentScore} points! Total Score: ${score}`);
 
         document.getElementById("scoreDisplay").innerText = score;
 
