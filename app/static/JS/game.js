@@ -273,8 +273,8 @@ document.addEventListener("keyup", (e) => {
 });
 
 function setUp(){
-    canvas.width = window.innerWidth-275;
-    canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth-270;
+    canvas.height = window.innerHeight-170;
     let rectWidth = canvas.width*0.4
     let rectHeight = canvas.height*0.4
 
