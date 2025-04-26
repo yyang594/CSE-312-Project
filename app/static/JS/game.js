@@ -107,7 +107,7 @@ function startTimer() {
     clearInterval(intervalId); // Clear old timer if it exists
 
     const timerElement = document.getElementById("timer");
-    let totalTime = 30;
+    let totalTime = 5;
 
     timerElement.innerHTML = `00:${totalTime}`;
 
@@ -148,8 +148,6 @@ var totalTime = maxTime
 
 //For adding score to total
 var toAdd = 0
-
-let intervalId = setInterval(countdown, 1000);
 
 function countdown() {
     totalTime -= 1
