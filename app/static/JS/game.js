@@ -31,15 +31,105 @@ const keysPressed = new Set();
 
 //Format: [Question]: [Answer1, Answer2, Answer3, Answer4, Solution]
 questionSet = {
-    "What is 1 + 1?": ["1", "2", "3", "4", "2"],
-    "What color is the sky?": ["magenta", "blue", "hot pink", "green", "blue"],
-    "What produces light?": ["Moon", "Concrete", "Leaf", "Sun", "Sun"]
+    // "What is 1 + 1?": ["1", "2", "3", "4", "2"],
+    // "What color is the sky?": ["magenta", "blue", "hot pink", "green", "blue"],
+    // "What produces light?": ["Moon", "Concrete", "Leaf", "Sun", "Sun"]
+}
+async function fetchTriviaQuestions(amount = 10) {
+    try {
+        const response = await fetch(`https://opentdb.com/api.php?amount=${amount}&type=multiple`);
+        const data = await response.json();
+        const results = data.results;
+
+        if (results && results.length > 0) {
+            results.forEach(result => {
+                const question = decodeHTML(result.question);
+                const correctAnswer = decodeHTML(result.correct_answer);
+                const incorrectAnswers = result.incorrect_answers.map(ans => decodeHTML(ans));
+
+                const allAnswers = [...incorrectAnswers, correctAnswer];
+                shuffleArray(allAnswers);
+
+                questionSet[question] = [
+                    allAnswers[0],
+                    allAnswers[1],
+                    allAnswers[2],
+                    allAnswers[3],
+                    correctAnswer
+                ];
+            });
+
+            console.log('Trivia questions loaded into questionSet:', questionSet);
+
+            // Now start the game AFTER loading questions
+            startGame();
+        } else {
+            console.error('No trivia questions found.');
+        }
+    } catch (error) {
+        console.error('Error fetching trivia questions:', error);
+    }
 }
 
-var currentQuestion = getRandomKey(questionSet)
-questionDisplay.innerHTML = currentQuestion
-var solution = questionSet[currentQuestion].pop()
-var answers = questionSet[currentQuestion]
+function decodeHTML(html) {
+    const txt = document.createElement('textarea');
+    txt.innerHTML = html;
+    return txt.value;
+}
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+// Fetch the trivia questions immediately when page loads
+fetchTriviaQuestions();
+
+let intervalId;  // Move intervalId here globally
+
+function startGame() {
+    askNewQuestion();
+    startTimer();
+    requestAnimationFrame(gameLoop);
+}
+
+function askNewQuestion() {
+    currentQuestion = getRandomKey(questionSet);
+    questionDisplay.innerHTML = currentQuestion;
+
+    let allAnswers = [...questionSet[currentQuestion]];
+    solution = allAnswers.pop();
+    answers = allAnswers;
+}
+
+function startTimer() {
+    clearInterval(intervalId); // Clear old timer if it exists
+
+    const timerElement = document.getElementById("timer");
+    let totalTime = 30;
+
+    timerElement.innerHTML = `00:${totalTime}`;
+
+    intervalId = setInterval(function () {
+        totalTime -= 1;
+        timerElement.innerHTML = `00:${totalTime < 10 ? "0" + totalTime : totalTime}`;
+
+        if (totalTime <= 0) {
+            clearInterval(intervalId);
+            askNewQuestion();  // Ask new question
+            playerState = "Default"
+            startTimer();      // Restart timer for new question
+        }
+    }, 1000);
+}
+
+
+// var currentQuestion = getRandomKey(questionSet)
+// questionDisplay.innerHTML = currentQuestion
+// var solution = questionSet[currentQuestion].pop()
+// var answers = questionSet[currentQuestion]
 var solutionParameter;
 
 canvas.height = window.innerHeight;
@@ -51,35 +141,35 @@ var playerState = "Default"
 //Timer
 //Change maxTime to change countdown
 const timer = document.getElementById("timer")
-var maxTime = 5
+var maxTime = 30
 var totalTime = maxTime
-
-let intervalId = setInterval(countdown, 1000);
-
-function countdown() {
-    totalTime -= 1
-    timer.innerHTML = "00:" + totalTime
-    if (totalTime == 0){
-        totalTime = maxTime
-        currentQuestion = getRandomKey(questionSet)
-        questionDisplay.innerHTML = currentQuestion
-
-        //Debugging purposes
-        let rectXBound = solutionParameter[0]+solutionParameter[2]
-        let rectYBound = solutionParameter[1]+solutionParameter[3]
-
-        console.log(`You are at position: (${playerX},${playerY})`)
-        ctx.willReadFrequently = true;  //Efficiency (Optional (Solely for getImageData))
-        console.log(`You have chosen: (${ctx.getImageData(playerX, playerY, 1, 1).data})`)
-
-        if(playerX > solutionParameter[0] && playerX < rectXBound && playerY > solutionParameter[1] && playerY < rectYBound){
-            console.log("You got the question right!!!")
-        }
-
-        //Release Player State
-        playerState = "Default"
-    }
-}
+//
+// let intervalId = setInterval(countdown, 1000);
+//
+// function countdown() {
+//     totalTime -= 1
+//     timer.innerHTML = "00:" + totalTime
+//     if (totalTime == 0){
+//         totalTime = maxTime
+//         currentQuestion = getRandomKey(questionSet)
+//         questionDisplay.innerHTML = currentQuestion
+//
+//         //Debugging purposes
+//         let rectXBound = solutionParameter[0]+solutionParameter[2]
+//         let rectYBound = solutionParameter[1]+solutionParameter[3]
+//
+//         console.log(`You are at position: (${playerX},${playerY})`)
+//         ctx.willReadFrequently = true;  //Efficiency (Optional (Solely for getImageData))
+//         console.log(`You have chosen: (${ctx.getImageData(playerX, playerY, 1, 1).data})`)
+//
+//         if(playerX > solutionParameter[0] && playerX < rectXBound && playerY > solutionParameter[1] && playerY < rectYBound){
+//             console.log("You got the question right!!!")
+//         }
+//
+//         //Release Player State
+//         playerState = "Default"
+//     }
+// }
 
 function pause() {
     clearInterval(intervalId);
