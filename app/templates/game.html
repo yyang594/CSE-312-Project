@@ -32,10 +32,9 @@
           <h3>Players & Chat</h3>
       </div>
       <div class="player-list">
-          <div class="player-item">Player 1: <strong>10 pts</strong></div>
-          <div class="player-item">Player 2: <strong>7 pts</strong></div>
-          <div class="player-item">Player 3: <strong>5 pts</strong></div>
-          <!-- Add more players dynamically via JS if needed -->
+        {% for player in players %}
+            <div class="player-item">{{ player.username }}: <strong>{{ player.score }} pts</strong></div>
+        {% endfor %}
       </div>
       <div id="chatBox">
           <div id="chatMessages">
@@ -96,6 +95,22 @@
       $(this).toggleClass("active");
     });
   });
+
+  const socket = io();
+
+// Listen for updates to the player list
+socket.on('update_player_list', function(players) {
+  const playerListElement = document.querySelector('.player-list');
+  playerListElement.innerHTML = '';  // Clear existing list
+
+  // Append each player dynamically
+  players.forEach(function(player) {
+    const playerItem = document.createElement('div');
+    playerItem.classList.add('player-item');
+    playerItem.innerHTML = `${player.username}: <strong>${player.score} pts</strong>`;
+    playerListElement.appendChild(playerItem);
+  });
+});
 
   function handleUploadPfp(event) {
     event.preventDefault();

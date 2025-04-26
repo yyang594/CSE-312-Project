@@ -33,6 +33,7 @@ db = database.get_db()
 collection = db['items']
 users_collection = db['users']
 questions_collection = db['questions']
+player_collection = db['players']
 
 #****Protects against CSRF attacks (CHANGE LATER)****
 app.config['SECRET_KEY'] = 'temporary-very-weak-key'
@@ -219,6 +220,22 @@ def handle_connect():
 
     player_data[request.sid] = {"username": username}
     print(f"{username} connected with ID {request.sid}")
+
+
+@socketio.on('join_room')
+def on_join(data):
+    room = data['room']
+    username = data['username']
+
+    player = player_collection.find_one({"username": username})
+
+    if not player:
+        player_collection.insert_one({"username": username, "score": 0, "room": room})
+
+    players_in_room = player_collection.find({"room": room})
+    player_list = [{"username": player['username'], "score": player['score']} for player in players_in_room]
+
+    emit('update_player_list', player_list, room=room)
 
 # --- Set up avatar uploads
 
