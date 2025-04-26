@@ -107,7 +107,7 @@ function startTimer() {
     clearInterval(intervalId); // Clear old timer if it exists
 
     const timerElement = document.getElementById("timer");
-    let totalTime = 5;
+    let totalTime = 30;
 
     timerElement.innerHTML = `00:${totalTime}`;
 
@@ -303,18 +303,19 @@ function setUp(){
     ]
 
     //Format: [x, y, width, height, textX, textY, color, answer]
-    for (let rect = 0; rect < rectParemeters.length; rect++){
-        let currentRect = rectParemeters[rect]
+    for (let rect = 0; rect < rectParemeters.length; rect++) {
+        let currentRect = rectParemeters[rect];
         ctx.fillStyle = currentRect[6];
         ctx.fillRect(currentRect[0], currentRect[1], currentRect[2], currentRect[3]);
-
+    
         ctx.fillStyle = "white";
         ctx.font = '20px sans-serif';
+        ctx.textAlign = "center";      // ADDED THIS
+        ctx.textBaseline = "middle";   // ANDED THIS
         ctx.fillText(currentRect[7], currentRect[4], currentRect[5]);
         
-        //GET PAREMETERS OF CORRECT RECTANGLE
-        if(currentRect[currentRect.length-1] == true){
-            solutionParameter = [currentRect[0], currentRect[1], currentRect[2], currentRect[3]]
+        if (currentRect[currentRect.length-1] == true) {
+            solutionParameter = [currentRect[0], currentRect[1], currentRect[2], currentRect[3]];
         }
     }
 }
