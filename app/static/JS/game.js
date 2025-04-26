@@ -62,28 +62,29 @@ function countdown() {
     timer.innerHTML = "00:" + totalTime
     if (totalTime == 0){
         totalTime = maxTime
-        currentQuestion = getRandomKey(questionSet)
-        questionDisplay.innerHTML = currentQuestion
 
         //Debugging purposes
         let rectXBound = solutionParameter[0]+solutionParameter[2]
         let rectYBound = solutionParameter[1]+solutionParameter[3]
 
-        console.log(`You are at position: (${playerX},${playerY})`)
+        //console.log(`You are at position: (${playerX},${playerY})`)
         ctx.willReadFrequently = true;  //Efficiency (Optional (Solely for getImageData))
-        console.log(`You have chosen: (${ctx.getImageData(playerX, playerY, 1, 1).data})`)
+        //console.log(`You have chosen: (${ctx.getImageData(playerX, playerY, 1, 1).data})`)
 
         if(playerX > solutionParameter[0] && playerX < rectXBound && playerY > solutionParameter[1] && playerY < rectYBound){
             console.log("You got the question right!!!")
         }
-        console.log(currentQuestion)
-        delete questionSet[currentQuestion];
-        console.log(questionSet)
 
-        if(questionSet == []){
+        delete questionSet[currentQuestion];
+        
+        currentQuestion = getRandomKey(questionSet)
+        questionDisplay.innerHTML = currentQuestion
+
+        if(currentQuestion == undefined){
             //End the game
-            isGameRunning = False
+            isGameRunning = false
         }
+
         //Release Player State
         playerState = "Default"
     }
@@ -239,32 +240,36 @@ function endScreen(){
     canvas.height = window.innerHeight;
     
     // Create gradient
-    const gradient = ctx.createLinearGradient(0, 0, c.width, 0);
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
     gradient.addColorStop("0", "magenta");
     gradient.addColorStop("0.5", "blue");
     gradient.addColorStop("1.0", "red");
 
     // Fill with gradient
     ctx.fillStyle = gradient;
-    ctx.fillText("You Win!", 10, 90);
+    ctx.font = "48px Arial";
+    ctx.fillText("You Win!", 40, 90);
 }
 
 //Main loop
 function gameLoop() {
     //Has game ended
     if(!isGameRunning){
-        endScreen()
-        return;
+        endScreen();
+        console.log("End game")
+        return
     }
+
+    if(questionSet != {}){
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        setUp();
+    }
+
     //Dash functionality
     if(speed !== 3){
         speed -= 1
     }
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if(currentQuestion != undefined){
-        setUp();
-    }
+    
     if(playerState === "Default"){
         updatePosition();
     }

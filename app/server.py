@@ -161,7 +161,6 @@ def submit_question():
                 "solution": correct_answer[i]
             }
             questions_collection.insert_one(toInsert)
-        print("QUESTIONS")
         for item in questions_collection.find():
             print(item,flush=True)
         return redirect(url_for('home'))
