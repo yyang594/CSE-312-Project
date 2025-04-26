@@ -6,7 +6,6 @@ from wtforms import StringField, PasswordField
 from wtforms.validators import InputRequired, Length, EqualTo, Regexp
 
 from PIL import Image
-import requests
 import database
 import logging
 import os

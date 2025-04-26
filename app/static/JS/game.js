@@ -68,46 +68,21 @@ function startTimer() {
     intervalId = setInterval(countdown, 1000);
 }
 
-function countdown() {
-    if (playerState === "Locked") {
-        return; // Stop timer if player has locked
-    }
-
-    totalTime -= 1;
-    updateTimerDisplay();
-
-        if (totalTime <= 0) {
-            clearInterval(intervalId);
-            askNewQuestion();  // Ask new question
-            playerState = "Default"
-            startTimer();      // Restart timer for new question
-        }
-    }, 1000);
-}
-
-
 // var currentQuestion = getRandomKey(questionSet)
 // questionDisplay.innerHTML = currentQuestion
 // var solution = questionSet[currentQuestion].pop()
 // var answers = questionSet[currentQuestion]
-var solutionParameter;
 var isGameRunning = true;
 
 canvas.height = window.innerHeight;
 canvas.width = window.innerWidth;
-let playerX = canvas.width / 2;
-let playerY = canvas.height / 2;
-var playerState = "Default";
 var rectXBound, rectYBound;
 var playerScore = 0;
 
 //Timer
-//Change maxTime to change countdown
-const timer = document.getElementById("timer")
-var maxTime = 5
-var totalTime = maxTime
 
 //For adding score to total
+/*
 var toAdd = 0
 
 function countdown() {
@@ -145,6 +120,7 @@ function countdown() {
     }
 }
 
+
 //This should take in a dict(key) which would be the list of answers and the solution
     if (totalTime <= 0) {
         clearInterval(intervalId);
@@ -153,6 +129,7 @@ function countdown() {
         startTimer();
     }
 }
+*/
 
 function updateTimerDisplay() {
     timerElement.innerHTML = "00:" + (totalTime < 10 ? "0" + totalTime : totalTime);
@@ -281,7 +258,6 @@ document.addEventListener("keydown", (e) => {
         playerState = "Locked";
         document.getElementById('avatar').style.filter = 'hue-rotate(90deg)';
 
-        let elapsed = (Date.now() - startTime) / 1000; // seconds
         let elapsed = (Date.now() - startTime) / 1000;
         const MAX_TIME = 10;
         const MAX_SCORE = 1000;
@@ -292,8 +268,6 @@ document.addEventListener("keydown", (e) => {
         let currentScore = Math.round(MAX_SCORE * ((maxTime - elapsed) / maxTime));
         currentScore = Math.max(currentScore, 0); // no negative scores
         elapsed = Math.min(elapsed, MAX_TIME);
-        let currentScore = Math.round(MAX_SCORE * ((MAX_TIME - elapsed) / MAX_TIME));
-        currentScore = Math.max(currentScore, 0);
 
         toAdd += currentScore;
         //console.log(`Scored ${currentScore} points! Total Score: ${score}`);
@@ -302,16 +276,19 @@ document.addEventListener("keydown", (e) => {
         console.log(`Scored ${currentScore} points! Total Score: ${score}`);
         document.getElementById("scoreDisplay").innerText = score;
 
-        socket.emit("update_score", {
-            score: score,
-            user_id: USER_ID,
-            room: ROOM_ID
+        socket.emit("update_score", { 
+            score: score, 
+            user_id: USER_ID, 
+            room: ROOM_ID 
         });
 
+        // Reset timer
         startTime = Date.now();
     }
-    if (e.code === 'ShiftLeft') {
-        speed = 15; // Dash
+    if (e.code === 'ShiftLeft'){
+        //Dash
+        console.log("ShiftLeft Pressed")
+        speed = 15
     }
 });
 
@@ -393,8 +370,6 @@ function gameLoop() {
     drawPlayers(); // draw others first
     drawCircle();  // draw self
     requestAnimationFrame(gameLoop);
-// --- Ready Up Button ---
-
-function readyUp() {
-    socket.emit('player_ready', { room: ROOM_ID });
 }
+
+requestAnimationFrame(gameLoop);
