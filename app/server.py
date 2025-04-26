@@ -195,34 +195,6 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 #Lobby
 rooms = {}
-room_questions = {}
-player_ready = {}
-
-
-#https://opentdb.com/api.php?amount=${amount}&category=18&difficulty=medium&type=multiple
-def fetch_trivia_questions(amount=10):
-    response = requests.get(f"https://opentdb.com/api.php?amount={amount}&category=18&difficulty=medium&type=multiple")
-    data = response.json()
-    questions = []
-
-    for result in data['results']:
-        question = result['question']
-        correct = result['correct_answer']
-        incorrect = result['incorrect_answers']
-        all_answers = incorrect + [correct]
-
-        # Randomize answers
-        import random
-        random.shuffle(all_answers)
-
-        questions.append({
-            'question': question,
-            'answers': all_answers,
-            'solution': correct
-        })
-
-    return questions
-
 
 @app.route('/lobby')
 def lobby():
@@ -230,26 +202,14 @@ def lobby():
 
 
 @socketio.on('join_room')
-def handle_join(data):
+def on_join(data):
     room = data['room']
     join_room(room)
-    if room not in room_questions:
-        room_questions[room] = []  # Placeholder, we'll fetch questions later
-        player_ready[room] = {}
-    player_ready[room][request.sid] = False  # Mark player as not ready
-
-
-@socketio.on('player_ready')
-def handle_player_ready(data):
-    room = data['room']
-    player_ready[room][request.sid] = True
-    total_players = len(player_ready[room])
-    ready_players = sum(1 for ready in player_ready[room].values() if ready)
-    if ready_players / total_players >= 0.5:  # Majority ready
-        if not room_questions[room]:  # Fetch if not already fetched
-            room_questions[room] = fetch_trivia_questions()
-        socketio.emit('start_game', {'questions': room_questions[room]}, room=room)
-
+    if room not in rooms:
+        rooms[room] = []
+    rooms[room].append(request.sid)
+    player_data[request.sid]['room'] = room
+    emit('joined_room', {'room': room}, room=room)
 
 @socketio.on('disconnect')
 def on_disconnect():

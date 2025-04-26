@@ -6,4 +6,3 @@ flask-socketio
 wtforms
 flask_wtf
 pillow
-requests
