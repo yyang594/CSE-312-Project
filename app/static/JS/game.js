@@ -7,7 +7,7 @@ let startTime = Date.now();
 
 let questionSet = {}; // Questions sent by server
 let intervalId;
-let maxTime = 30;
+let maxTime = 5;
 let totalTime = maxTime;
 let playerState = "Default";
 let currentQuestion;
@@ -15,8 +15,12 @@ let answers;
 let solution;
 let solutionParameter = [];
 
+let playerScore = 0
+let rewardScore = 200
+
 const canvas = document.getElementById("Canvas");
 const ctx = canvas.getContext("2d");
+let isGameRunning = true
 
 const questionDisplay = document.getElementById("questionBox");
 const timerElement = document.getElementById("timer");
@@ -70,7 +74,16 @@ function countdown() {
     totalTime -= 1;
     updateTimerDisplay();
 
+    let rectXBound = solutionParameter[0]+solutionParameter[2]
+    let rectYBound = solutionParameter[1]+solutionParameter[3]
+
     if (totalTime <= 0) {
+        if(playerX > solutionParameter[0] && playerX < rectXBound && playerY > solutionParameter[1] && playerY < rectYBound){
+            playerScore += rewardScore
+            console.log("You got the question right!!!")
+            console.log(`Your score is: ${playerScore}`)
+        }
+
         clearInterval(intervalId);
         playerState = "Default"; // Reset player lock state
         askNewQuestion();
@@ -233,4 +246,10 @@ document.addEventListener("keyup", (e) => {
 
 function readyUp() {
     socket.emit('player_ready', { room: ROOM_ID });
+    console.log("Ready pressed!");
+
+    const button = document.getElementById("readyButton");
+    if (button) {
+        button.remove();
+    }
 }
