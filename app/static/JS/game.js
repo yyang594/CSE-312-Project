@@ -150,37 +150,14 @@ var totalTime = maxTime
 var toAdd = 0
 
 function countdown() {
-    totalTime -= 1
-    timer.innerHTML = "00:" + totalTime
-    if (totalTime == 0){
-        totalTime = maxTime
+    totalTime -= 1;
+    updateTimerDisplay();
 
-        rectXBound = solutionParameter[0]+solutionParameter[2]
-        rectYBound = solutionParameter[1]+solutionParameter[3]
-
-        //console.log(`You are at position: (${playerX},${playerY})`)
-        ctx.willReadFrequently = true;  //Efficiency (Optional (Solely for getImageData))
-        //console.log(`You have chosen: (${ctx.getImageData(playerX, playerY, 1, 1).data})`)
-        if(playerX > solutionParameter[0] && playerX < rectXBound && playerY > solutionParameter[1] && playerY < rectYBound){
-            score += toAdd
-            console.log(`Your score is ${score}`)
-        }
-
-        toAdd = 0
-
-
-        delete questionSet[currentQuestion];
-        
-        currentQuestion = getRandomKey(questionSet)
-        questionDisplay.innerHTML = currentQuestion
-
-        if(currentQuestion == undefined){
-            //End the game
-            isGameRunning = false
-        }
-
-        //Release Player State
-        playerState = "Default"
+    if (totalTime <= 0) {
+        clearInterval(intervalId);
+        playerState = "Default"; // Reset player lock state
+        askNewQuestion();
+        startTimer();
     }
 }
 
