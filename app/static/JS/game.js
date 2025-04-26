@@ -7,7 +7,7 @@ let startTime = Date.now();
 
 let questionSet = {}; // Questions sent by server
 let intervalId;
-let maxTime = 5;
+let maxTime = 30;
 let totalTime = maxTime;
 let playerState = "Default";
 let currentQuestion;
@@ -20,7 +20,6 @@ let rewardScore = 200
 
 const canvas = document.getElementById("Canvas");
 const ctx = canvas.getContext("2d");
-let isGameRunning = true
 
 const questionDisplay = document.getElementById("questionBox");
 const timerElement = document.getElementById("timer");
@@ -32,10 +31,51 @@ socket.on("connect", () => {
     socket.emit("join_room", { room: ROOM_ID }); // Tell server what room we joined
 });
 
+socket.on('player_moved', function(data) {
+    players[data.id] = {
+        x: data.x,
+        y: data.y,
+        name: data.name
+    };
+});
+
 socket.on("start_game", function(data) {
     console.log("Received start_game from server");
+
+    // Hide the waiting screen
+    const waitingRoom = document.getElementById("waitingRoom");
+    if (waitingRoom) {
+        waitingRoom.style.display = "none";
+    }
+
+    // Show the game screen
+    const gameContainer = document.getElementById("gameContainer");
+    if (gameContainer) {
+        gameContainer.style.display = "block";
+    }
+
     loadQuestions(data.questions);
     startGame();
+});
+
+socket.on('update_lobby', function(players) {
+    const playerList = document.getElementById('player-list');
+    playerList.innerHTML = '';
+
+    for (const id in players) {
+        const player = players[id];
+        const li = document.createElement('li');
+        li.textContent = player.username + (player.ready ? ' ✅' : ' ❌');
+        playerList.appendChild(li);
+    }
+});
+
+socket.on('next_question', function(data) {
+    currentQuestion = data.question;
+    answers = [...data.answers];
+    solution = data.solution;
+
+    questionDisplay.innerHTML = currentQuestion;
 });
 
 // --- Game Logic ---
@@ -48,18 +88,13 @@ function loadQuestions(questionsFromServer) {
 }
 
 function startGame() {
-    askNewQuestion();
+    requestNewQuestion();
     startTimer();
     requestAnimationFrame(gameLoop);
 }
 
-function askNewQuestion() {
-    currentQuestion = getRandomKey(questionSet);
-    questionDisplay.innerHTML = currentQuestion;
-
-    let allAnswers = [...questionSet[currentQuestion]];
-    solution = allAnswers.pop();
-    answers = allAnswers;
+function requestNewQuestion() {
+    socket.emit('request_next_question', { room: ROOM_ID });
 }
 
 function startTimer() {
@@ -77,16 +112,16 @@ function countdown() {
     let rectXBound = solutionParameter[0]+solutionParameter[2]
     let rectYBound = solutionParameter[1]+solutionParameter[3]
 
-    if (totalTime <= 0) {
-        if(playerX > solutionParameter[0] && playerX < rectXBound && playerY > solutionParameter[1] && playerY < rectYBound){
+    if (totalTime <= 0.0) {
+        if (playerX > solutionParameter[0] && playerX < rectXBound && playerY > solutionParameter[1] && playerY < rectYBound){
             playerScore += rewardScore
             console.log("You got the question right!!!")
             console.log(`Your score is: ${playerScore}`)
         }
 
         clearInterval(intervalId);
-        playerState = "Default"; // Reset player lock state
-        askNewQuestion();
+        playerState = "Default";
+        requestNewQuestion();
         startTimer();
     }
 }
@@ -158,10 +193,14 @@ function drawPlayers() {
 function setUp() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    if (!answers || answers.length < 4) {
+        // Don't try to draw answer rectangles if not ready
+        return;
+    }
+
     let rectWidth = canvas.width * 0.4;
     let rectHeight = canvas.height * 0.4;
 
-    answers = questionSet[currentQuestion];
     let rectParameters = [
         [0, 0, rectWidth, rectHeight, rectWidth / 2, rectHeight / 2, "red", answers[0], solution === answers[0]],
         [canvas.width - rectWidth, 0, rectWidth, rectHeight, canvas.width - rectWidth + rectWidth / 2, rectHeight / 2, "blue", answers[1], solution === answers[1]],
@@ -175,8 +214,8 @@ function setUp() {
 
         ctx.fillStyle = "white";
         ctx.font = '20px sans-serif';
-        ctx.textAlign = "center";      // ADDED THIS
-        ctx.textBaseline = "middle";   // ANDED THIS
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
         ctx.fillText(rect[7], rect[4], rect[5]);
 
         if (rect[8]) {
