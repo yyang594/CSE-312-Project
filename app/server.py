@@ -140,30 +140,6 @@ def register():
 
     return render_template('register.html', form=form)
 
-@socketio.on('request_next_question')
-def handle_request_next_question(data):
-    room = data['room']
-    questions = lobbies.get(room, {}).get('questions', [])
-
-    if questions:
-        next_question = questions.pop(0)  # Get and remove the next question
-        socketio.emit('next_question', next_question, room=room)
-    else:
-        print(f"No more questions left in room {room}. Game Over!")
-
-        # Find winner
-        players = lobbies.get(room, {}).get('players', {})
-        if players:
-
-            # Example: players[sid]['score'] = player's final score
-
-            winner_sid = max(players, key=lambda sid: players[sid].get('score', 0))
-            winner = players[winner_sid]
-
-            socketio.emit('game_over', {
-                'winnerName': winner['username'],
-                'winnerScore': winner.get('score', 0)
-            }, room=room)
 
 @app.route('/test')
 def test():
@@ -241,7 +217,7 @@ player_ready = {}
 
 
 # https://opentdb.com/api.php?amount=${amount}&category=18&difficulty=medium&type=multiple
-def fetch_trivia_questions(amount=10):
+def fetch_trivia_questions(amount=50):
     response = requests.get(f"https://opentdb.com/api.php?amount={amount}&category=18&difficulty=medium&type=multiple")
     data = response.json()
     questions = []
