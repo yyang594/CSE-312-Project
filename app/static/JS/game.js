@@ -6,7 +6,7 @@ let myId = null;
 
 let questionSet = {};
 let intervalId;
-let maxTime = 10;
+let maxTime = 20;
 let totalTime = maxTime;
 let playerState = "Default";
 let currentQuestion;
@@ -51,6 +51,17 @@ socket.on('next_question', function(data) {
     answers = [...data.answers];
     solution = data.solution;
     questionDisplay.innerHTML = currentQuestion;
+});
+
+socket.on('update_positions', function(updatedPlayers) {
+    players = {};
+    for (const id in updatedPlayers) {
+        players[id] = {
+            x: updatedPlayers[id].x,
+            y: updatedPlayers[id].y,
+            name: updatedPlayers[id].name
+        };
+    }
 });
 
 socket.on('update_player_scores', function(playerScores) {
@@ -126,8 +137,8 @@ function updateTimerDisplay() {
 
 // --- Drawing and Movement ---
 
-canvas.width = 1645;
-canvas.height = 1080;
+canvas.width = 1024;
+canvas.height = 576;
 const radius = 10;
 let speed = 3;
 const keysPressed = new Set();
@@ -214,7 +225,6 @@ function gameLoop() {
         updatePosition();
     }
     drawPlayers();
-    drawCircle();
     requestAnimationFrame(gameLoop);
 }
 
@@ -222,6 +232,15 @@ function gameLoop() {
 
 document.addEventListener("keydown", (e) => {
     keysPressed.add(e.key.toLowerCase());
+
+    if (e.code === 'KeyR') {
+        // When player presses R, send push event
+        socket.emit('player_push', {
+            x: playerX,
+            y: playerY,
+            room: ROOM_ID
+        });
+    }
 });
 
 document.addEventListener("keyup", (e) => {
