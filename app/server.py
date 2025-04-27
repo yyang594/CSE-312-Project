@@ -5,8 +5,8 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField
 from wtforms.validators import InputRequired, Length, EqualTo, Regexp
 
-# from PIL import Image
 import requests
+import random
 import database
 import logging
 import os
@@ -38,7 +38,6 @@ player_collection = db['players']
 # ****Protects against CSRF attacks (CHANGE LATER)****
 app.config['SECRET_KEY'] = 'temporary-very-weak-key'
 
-
 class RegisterForm(FlaskForm):
     username = StringField('Username', [
         InputRequired(),
@@ -54,7 +53,6 @@ class RegisterForm(FlaskForm):
         InputRequired(),
         EqualTo('password', message='Passwords must match')
     ])
-
 
 class LoginForm(FlaskForm):
     username = StringField('Username', [
@@ -84,12 +82,14 @@ def home():
 
     return render_template('home.html', username=username)
 
+@app.route('/lobby')
+def lobby():
+    return render_template('lobby.html')
 
 @app.route('/game')
 def game():
     room = request.args.get('room', 'default')
     return render_template('game.html', room=room)
-
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -112,7 +112,6 @@ def login():
         response.set_cookie("auth_token", token, httponly=True, secure=True, samesite='Strict', max_age=3600)
         return response
     return render_template('login.html', form=form)
-
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -157,19 +156,6 @@ def test():
         info.append(item)
     return jsonify(info)
 
-
-@app.route('/items')
-def get_items():
-    items = list(collection.find({}, {'_id': 0}))
-    return jsonify(items)
-
-
-@app.route('/add-item')
-def add_item():
-    collection.insert_one({"name": "Test Item"})
-    return jsonify({"status": "item added"})
-
-
 @app.before_request
 def log_request():
     ip = request.remote_addr
@@ -177,9 +163,7 @@ def log_request():
     path = request.path
     logging.info(f"{ip} {method} {path}")
 
-
 player_data = {}
-
 
 @socketio.on('move')
 def handle_move(data):
@@ -204,7 +188,6 @@ def handle_player_push(data):
         'x': data['x'],
         'y': data['y']
     }, room=room)
-
 
 @socketio.on('sync_positions')
 def handle_sync_positions(data):
@@ -242,7 +225,6 @@ def handle_connect():
     player_data[request.sid] = {"username": username}
     print(f"{username} connected with ID {request.sid}")
 
-
 # --- Set up avatar uploads
 
 UPLOAD_FOLDER = 'static/uploads'
@@ -253,9 +235,6 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Lobby
 lobbies = {}
-# room_questions = {}
-# player_ready = {}
-
 
 # https://opentdb.com/api.php?amount=${amount}&category=18&difficulty=medium&type=multiple
 def fetch_trivia_questions(amount=50):
@@ -270,7 +249,6 @@ def fetch_trivia_questions(amount=50):
         all_answers = incorrect + [correct]
 
         # Randomize answers
-        import random
         random.shuffle(all_answers)
 
         questions.append({
@@ -279,12 +257,6 @@ def fetch_trivia_questions(amount=50):
             'solution': correct
         })
     return questions
-
-
-@app.route('/lobby')
-def lobby():
-    return render_template('lobby.html')
-
 
 @socketio.on('join_room')
 def handle_join(data):
@@ -301,7 +273,6 @@ def handle_join(data):
 
     emit('update_lobby', lobbies[room]['players'], room=room)
 
-
 @socketio.on('player_ready')
 def handle_player_ready(data):
     room = data['room']
@@ -315,7 +286,6 @@ def handle_player_ready(data):
         if not lobbies[room]['questions']:
             lobbies[room]['questions'] = fetch_trivia_questions()
         socketio.emit('start_game', {'questions': lobbies[room]['questions']}, room=room)
-
 
 @socketio.on('disconnect')
 def on_disconnect():
@@ -333,7 +303,6 @@ def on_disconnect():
             del lobbies[room]
 
     player_data.pop(sid, None)
-
 
 if __name__ == '__main__':
     # DELETE DEBUG LATER
