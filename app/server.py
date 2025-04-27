@@ -17,7 +17,7 @@ import bcrypt
 
 # --- Setup Logging ---
 
-LOG_DIR = '/logs'
+LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
 logging.basicConfig(
