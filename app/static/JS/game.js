@@ -279,8 +279,7 @@ document.addEventListener("keydown", (e) => {
         let currentScore = Math.round(MAX_SCORE * ((MAX_TIME - elapsed) / MAX_TIME));
         currentScore = Math.max(currentScore, 0);
 
-        score += currentScore;
-        console.log(`Scored ${currentScore} points! Total Score: ${score}`);
+        rewardScore += currentScore;
         document.getElementById("scoreDisplay").innerText = score;
 
         socket.emit("update_score", {
