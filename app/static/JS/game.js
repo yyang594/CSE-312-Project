@@ -8,7 +8,7 @@ let startTime = Date.now();
 
 let questionSet = {}; // Questions sent by server
 let intervalId;
-let maxTime = 10;
+let maxTime = 30;
 let totalTime = maxTime;
 let playerState = "Default";
 let currentQuestion;
@@ -178,6 +178,7 @@ function countdown() {
             console.log("You got the question right!");
             console.log(`Your score is: ${playerScore}`);
         }
+        rewardScore = 200
 
         clearInterval(intervalId);
         playerState = "Default";
@@ -301,19 +302,9 @@ document.addEventListener("keydown", (e) => {
         if (playerState === "Locked") return;
 
         playerState = "Locked";
-        document.getElementById('avatar').style.filter = 'hue-rotate(90deg)';
-
-        let elapsed = (Date.now() - startTime) / 1000;
-        const MAX_TIME = 10;
-        const MAX_SCORE = 1000;
-
-        elapsed = Math.min(elapsed, MAX_TIME);
-        let currentScore = Math.round(MAX_SCORE * ((MAX_TIME - elapsed) / MAX_TIME));
-        currentScore = Math.max(currentScore, 0);
-
-        score += currentScore;
-        console.log(`Scored ${currentScore} points! Total Score: ${score}`);
-        document.getElementById("scoreDisplay").innerText = score;
+        
+        rewardScore += totalTime*2;
+        //document.getElementById("scoreDisplay").innerText = score;
 
         socket.emit("update_score", {
             score: score,
@@ -323,6 +314,7 @@ document.addEventListener("keydown", (e) => {
 
         startTime = Date.now();
     }
+
 
     // r key for pushing players
     if (e.code === 'KeyR') {
