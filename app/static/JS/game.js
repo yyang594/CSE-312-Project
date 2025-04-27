@@ -172,9 +172,10 @@ function countdown() {
     let rectYBound = solutionParameter[1] + solutionParameter[3];
 
     if (totalTime <= 0) {
-        if (playerX > solutionParameter[0] && playerX < rectXBound &&
-            playerY > solutionParameter[1] && playerY < rectYBound) {
+        if (playerX > solutionParameter[0] && playerX < rectXBound && playerY > solutionParameter[1] && playerY < rectYBound) {
+            console.log(`REWARD SCORE: ${rewardScore}`)
             playerScore += rewardScore;
+            rewardScore = 200
             console.log("You got the question right!");
             console.log(`Your score is: ${playerScore}`);
         }
@@ -301,19 +302,11 @@ document.addEventListener("keydown", (e) => {
         if (playerState === "Locked") return;
 
         playerState = "Locked";
-        document.getElementById('avatar').style.filter = 'hue-rotate(90deg)';
+        
+        rewardScore += totalTime;
+        console.log(`TO ADD: ${totalTime}`)
 
-        let elapsed = (Date.now() - startTime) / 1000;
-        const MAX_TIME = 10;
-        const MAX_SCORE = 1000;
-
-        elapsed = Math.min(elapsed, MAX_TIME);
-        let currentScore = Math.round(MAX_SCORE * ((MAX_TIME - elapsed) / MAX_TIME));
-        currentScore = Math.max(currentScore, 0);
-
-        score += currentScore;
-        console.log(`Scored ${currentScore} points! Total Score: ${score}`);
-        document.getElementById("scoreDisplay").innerText = score;
+        //document.getElementById("scoreDisplay").innerText = score;
 
         socket.emit("update_score", {
             score: score,
