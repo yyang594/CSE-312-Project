@@ -15,8 +15,8 @@ let answers;
 let solution;
 let solutionParameter = [];
 
-let playerScore = 0
-let rewardScore = 200
+let playerScore = 0;
+let rewardScore = 200;
 
 const canvas = document.getElementById("Canvas");
 const ctx = canvas.getContext("2d");
@@ -28,7 +28,7 @@ const timerElement = document.getElementById("timer");
 
 socket.on("connect", () => {
     myId = socket.id;
-    socket.emit("join_room", { room: ROOM_ID }); // Tell server what room we joined
+    socket.emit("join_room", { room: ROOM_ID });
 });
 
 socket.on('player_moved', function(data) {
@@ -42,17 +42,11 @@ socket.on('player_moved', function(data) {
 socket.on("start_game", function(data) {
     console.log("Received start_game from server");
 
-    // Hide the waiting screen
     const waitingRoom = document.getElementById("waitingRoom");
-    if (waitingRoom) {
-        waitingRoom.style.display = "none";
-    }
+    if (waitingRoom) waitingRoom.style.display = "none";
 
-    // Show the game screen
     const gameContainer = document.getElementById("gameContainer");
-    if (gameContainer) {
-        gameContainer.style.display = "block";
-    }
+    if (gameContainer) gameContainer.style.display = "block";
 
     loadQuestions(data.questions);
     startGame();
@@ -74,8 +68,41 @@ socket.on('next_question', function(data) {
     currentQuestion = data.question;
     answers = [...data.answers];
     solution = data.solution;
-
     questionDisplay.innerHTML = currentQuestion;
+});
+
+socket.on('player_pushed', function(data) {
+    const pushX = data.x;
+    const pushY = data.y;
+    const pushRadius = 100;
+    const pushStrength = 50;
+
+    for (const id in players) {
+        if (id === data.pusherId) continue;
+
+        const other = players[id];
+        const dx = other.x - pushX;
+        const dy = other.y - pushY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < pushRadius) {
+            const factor = (pushRadius - distance) / pushRadius;
+            players[id].x += (dx / distance) * pushStrength * factor;
+            players[id].y += (dy / distance) * pushStrength * factor;
+        }
+    }
+
+    // --- THEN sync ---
+    socket.emit('sync_positions', { players: players, room: ROOM_ID });
+});
+
+socket.on('update_positions', function(updatedPlayers) {
+    players = updatedPlayers;
+
+    if (players[myId]) {
+        playerX = players[myId].x;
+        playerY = players[myId].y;
+    }
 });
 
 // --- Game Logic ---
@@ -98,7 +125,7 @@ function requestNewQuestion() {
 }
 
 function startTimer() {
-    clearInterval(intervalId); // Always clear old timers
+    clearInterval(intervalId);
     totalTime = maxTime;
     updateTimerDisplay();
 
@@ -109,14 +136,15 @@ function countdown() {
     totalTime -= 1;
     updateTimerDisplay();
 
-    let rectXBound = solutionParameter[0]+solutionParameter[2]
-    let rectYBound = solutionParameter[1]+solutionParameter[3]
+    let rectXBound = solutionParameter[0] + solutionParameter[2];
+    let rectYBound = solutionParameter[1] + solutionParameter[3];
 
-    if (totalTime <= 0.0) {
-        if (playerX > solutionParameter[0] && playerX < rectXBound && playerY > solutionParameter[1] && playerY < rectYBound){
-            playerScore += rewardScore
-            console.log("You got the question right!!!")
-            console.log(`Your score is: ${playerScore}`)
+    if (totalTime <= 0) {
+        if (playerX > solutionParameter[0] && playerX < rectXBound &&
+            playerY > solutionParameter[1] && playerY < rectYBound) {
+            playerScore += rewardScore;
+            console.log("You got the question right!");
+            console.log(`Your score is: ${playerScore}`);
         }
 
         clearInterval(intervalId);
@@ -130,16 +158,10 @@ function updateTimerDisplay() {
     timerElement.innerHTML = "00:" + (totalTime < 10 ? "0" + totalTime : totalTime);
 }
 
-function getRandomKey(dict) {
-    const keys = Object.keys(dict);
-    const randomIndex = Math.floor(Math.random() * keys.length);
-    return keys[randomIndex];
-}
-
 // --- Drawing and Movement ---
 
 canvas.height = window.innerHeight;
-canvas.width = window.innerWidth - 275; // Adjust for sidebar
+canvas.width = window.innerWidth - 275;
 const radius = 10;
 var speed = 3;
 const keysPressed = new Set();
@@ -193,10 +215,7 @@ function drawPlayers() {
 function setUp() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (!answers || answers.length < 4) {
-        // Don't try to draw answer rectangles if not ready
-        return;
-    }
+    if (!answers || answers.length < 4) return;
 
     let rectWidth = canvas.width * 0.4;
     let rectHeight = canvas.height * 0.4;
@@ -272,6 +291,12 @@ document.addEventListener("keydown", (e) => {
 
         startTime = Date.now();
     }
+
+    // 🔥 R key for pushing players
+    if (e.code === 'KeyR') {
+        socket.emit('player_push', { x: playerX, y: playerY, room: ROOM_ID, pusherId: myId });
+    }
+
     if (e.code === 'ShiftLeft') {
         speed = 15; // Dash
     }

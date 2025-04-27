@@ -194,6 +194,39 @@ def handle_move(data):
     if room:
         emit('player_moved', data, room=room)
 
+@socketio.on('player_push')
+def handle_player_push(data):
+    room = data['room']
+    sid = request.sid
+
+    socketio.emit('player_pushed', {
+        'pusherId': sid,
+        'x': data['x'],
+        'y': data['y']
+    }, room=room)
+
+
+@socketio.on('sync_positions')
+def handle_sync_positions(data):
+    room = data['room']
+    updated_players = data['players']
+
+    # Update player_data with the new positions
+    for sid, player_info in updated_players.items():
+        if sid in player_data:
+            player_data[sid]['x'] = player_info['x']
+            player_data[sid]['y'] = player_info['y']
+
+    # Create a clean payload to send back
+    broadcast_players = {}
+    for sid, pdata in player_data.items():
+        broadcast_players[sid] = {
+            'x': pdata.get('x', 0),
+            'y': pdata.get('y', 0),
+            'name': pdata.get('username', 'Guest')
+        }
+
+    socketio.emit('update_positions', broadcast_players, room=room)
 
 @socketio.on('connect')
 def handle_connect():
