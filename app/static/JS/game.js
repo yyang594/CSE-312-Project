@@ -1,13 +1,14 @@
 const socket = io(); // Connect to WebSocket
 
 let players = {};
+let gameRunning = false;
 let myId = null;
 let score = 0;
 let startTime = Date.now();
 
 let questionSet = {}; // Questions sent by server
 let intervalId;
-let maxTime = 30;
+let maxTime = 10;
 let totalTime = maxTime;
 let playerState = "Default";
 let currentQuestion;
@@ -92,7 +93,6 @@ socket.on('player_pushed', function(data) {
         }
     }
 
-    // --- THEN sync ---
     socket.emit('sync_positions', { players: players, room: ROOM_ID });
 });
 
@@ -115,6 +115,9 @@ function loadQuestions(questionsFromServer) {
 }
 
 function startGame() {
+    if (gameRunning) return;
+    gameRunning = true;
+
     requestNewQuestion();
     startTimer();
     requestAnimationFrame(gameLoop);
