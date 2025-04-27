@@ -5,8 +5,8 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField
 from wtforms.validators import InputRequired, Length, EqualTo, Regexp
 
+# from PIL import Image
 import requests
-import random
 import database
 import logging
 import os
@@ -16,7 +16,7 @@ import hashlib
 import bcrypt
 
 # --- Setup Logging ---
-"""
+
 LOG_DIR = '/logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -26,7 +26,6 @@ logging.basicConfig(
     format='[%(asctime)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-"""
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -38,6 +37,7 @@ player_collection = db['players']
 
 # ****Protects against CSRF attacks (CHANGE LATER)****
 app.config['SECRET_KEY'] = 'temporary-very-weak-key'
+
 
 class RegisterForm(FlaskForm):
     username = StringField('Username', [
@@ -54,6 +54,7 @@ class RegisterForm(FlaskForm):
         InputRequired(),
         EqualTo('password', message='Passwords must match')
     ])
+
 
 class LoginForm(FlaskForm):
     username = StringField('Username', [
@@ -83,14 +84,12 @@ def home():
 
     return render_template('home.html', username=username)
 
-@app.route('/lobby')
-def lobby():
-    return render_template('lobby.html')
 
 @app.route('/game')
 def game():
     room = request.args.get('room', 'default')
     return render_template('game.html', room=room)
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -113,6 +112,7 @@ def login():
         response.set_cookie("auth_token", token, httponly=True, secure=True, samesite='Strict', max_age=3600)
         return response
     return render_template('login.html', form=form)
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -138,16 +138,6 @@ def register():
 
     return render_template('register.html', form=form)
 
-@socketio.on('request_next_question')
-def handle_request_next_question(data):
-    room = data['room']
-    questions = lobbies.get(room, {}).get('questions', [])
-
-    if questions:
-        next_question = questions.pop(0)  # Get and remove the next question
-        socketio.emit('next_question', next_question, room=room)
-    else:
-        print(f"No more questions left in room {room}.")
 
 @app.route('/test')
 def test():
@@ -157,6 +147,19 @@ def test():
         info.append(item)
     return jsonify(info)
 
+
+@app.route('/items')
+def get_items():
+    items = list(collection.find({}, {'_id': 0}))
+    return jsonify(items)
+
+
+@app.route('/add-item')
+def add_item():
+    collection.insert_one({"name": "Test Item"})
+    return jsonify({"status": "item added"})
+
+
 @app.before_request
 def log_request():
     ip = request.remote_addr
@@ -164,7 +167,9 @@ def log_request():
     path = request.path
     logging.info(f"{ip} {method} {path}")
 
+
 player_data = {}
+
 
 @socketio.on('move')
 def handle_move(data):
@@ -179,38 +184,6 @@ def handle_move(data):
     if room:
         emit('player_moved', data, room=room)
 
-@socketio.on('player_push')
-def handle_player_push(data):
-    room = data['room']
-    sid = request.sid
-
-    socketio.emit('player_pushed', {
-        'pusherId': sid,
-        'x': data['x'],
-        'y': data['y']
-    }, room=room)
-
-@socketio.on('sync_positions')
-def handle_sync_positions(data):
-    room = data['room']
-    updated_players = data['players']
-
-    # Update player_data with the new positions
-    for sid, player_info in updated_players.items():
-        if sid in player_data:
-            player_data[sid]['x'] = player_info['x']
-            player_data[sid]['y'] = player_info['y']
-
-    # Create a clean payload to send back
-    broadcast_players = {}
-    for sid, pdata in player_data.items():
-        broadcast_players[sid] = {
-            'x': pdata.get('x', 0),
-            'y': pdata.get('y', 0),
-            'name': pdata.get('username', 'Guest')
-        }
-
-    socketio.emit('update_positions', broadcast_players, room=room)
 
 @socketio.on('connect')
 def handle_connect():
@@ -226,6 +199,7 @@ def handle_connect():
     player_data[request.sid] = {"username": username}
     print(f"{username} connected with ID {request.sid}")
 
+
 # --- Set up avatar uploads
 
 UPLOAD_FOLDER = 'static/uploads'
@@ -235,7 +209,10 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Lobby
-lobbies = {}
+rooms = {}
+room_questions = {}
+player_ready = {}
+
 
 # https://opentdb.com/api.php?amount=${amount}&category=18&difficulty=medium&type=multiple
 def fetch_trivia_questions(amount=10):
@@ -250,6 +227,7 @@ def fetch_trivia_questions(amount=10):
         all_answers = incorrect + [correct]
 
         # Randomize answers
+        import random
         random.shuffle(all_answers)
 
         questions.append({
@@ -260,51 +238,44 @@ def fetch_trivia_questions(amount=10):
 
     return questions
 
+
+@app.route('/lobby')
+def lobby():
+    return render_template('lobby.html')
+
+
 @socketio.on('join_room')
 def handle_join(data):
     room = data['room']
     join_room(room)
+    if room not in room_questions:
+        room_questions[room] = []  # Placeholder, we'll fetch questions later
+        player_ready[room] = {}
+    player_ready[room][request.sid] = False  # Mark player as not ready
 
-    if room not in lobbies:
-        lobbies[room] = {'players': {}, 'questions': []}
-
-    username = player_data[request.sid].get('username', 'Guest')
-    lobbies[room]['players'][request.sid] = {'username': username, 'ready': False}
-
-    player_data[request.sid]['room'] = room
-
-    emit('update_lobby', lobbies[room]['players'], room=room)
 
 @socketio.on('player_ready')
 def handle_player_ready(data):
     room = data['room']
-    lobbies[room]['players'][request.sid]['ready'] = True
+    player_ready[room][request.sid] = True
+    total_players = len(player_ready[room])
+    ready_players = sum(1 for ready in player_ready[room].values() if ready)
+    if ready_players / total_players >= 0.5:  # Majority ready
+        if not room_questions[room]:  # Fetch if not already fetched
+            room_questions[room] = fetch_trivia_questions()
+        socketio.emit('start_game', {'questions': room_questions[room]}, room=room)
 
-    players = lobbies[room]['players']
-    total_players = len(players)
-    ready_players = sum(1 for p in players.values() if p['ready'])
-
-    if ready_players / total_players >= 0.5:
-        if not lobbies[room]['questions']:
-            lobbies[room]['questions'] = fetch_trivia_questions()
-        socketio.emit('start_game', {'questions': lobbies[room]['questions']}, room=room)
 
 @socketio.on('disconnect')
 def on_disconnect():
     sid = request.sid
     room = player_data.get(sid, {}).get('room')
-
-    if room and room in lobbies and sid in lobbies[room]['players']:
-        del lobbies[room]['players'][sid]
-
-        # Optional: broadcast updated lobby
-        emit('update_lobby', lobbies[room]['players'], room=room)
-
-        # Clean up empty rooms
-        if not lobbies[room]['players']:
-            del lobbies[room]
-
+    if room and sid in rooms.get(room, []):
+        rooms[room].remove(sid)
+        if not rooms[room]:
+            del rooms[room]
     player_data.pop(sid, None)
+
 
 if __name__ == '__main__':
     # DELETE DEBUG LATER

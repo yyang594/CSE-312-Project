@@ -273,8 +273,7 @@ document.addEventListener("keydown", (e) => {
         if (playerState === "Locked") return;
 
         playerState = "Locked";
-        let toAdd = 100 - ((50-totalTime)*2)
-        rewardScore += toAdd*2;
+        rewardScore += toAdd;
         console.log(`TO ADD: ${toAdd}`)
 
         //document.getElementById("scoreDisplay").innerText = score;
