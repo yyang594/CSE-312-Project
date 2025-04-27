@@ -140,9 +140,10 @@ function countdown() {
     let rectYBound = solutionParameter[1] + solutionParameter[3];
 
     if (totalTime <= 0) {
-        if (playerX > solutionParameter[0] && playerX < rectXBound &&
-            playerY > solutionParameter[1] && playerY < rectYBound) {
+        if (playerX > solutionParameter[0] && playerX < rectXBound && playerY > solutionParameter[1] && playerY < rectYBound) {
+            console.log(`REWARD SCORE: ${rewardScore}`)
             playerScore += rewardScore;
+            rewardScore = 200
             console.log("You got the question right!");
             console.log(`Your score is: ${playerScore}`);
         }
@@ -269,22 +270,15 @@ document.addEventListener("keydown", (e) => {
         if (playerState === "Locked") return;
 
         playerState = "Locked";
-        document.getElementById('avatar').style.filter = 'hue-rotate(90deg)';
+        let toAdd = 100 - ((50-totalTime)*2)
+        rewardScore += toAdd*2;
+        console.log(`TO ADD: ${toAdd}`)
 
-        let elapsed = (Date.now() - startTime) / 1000;
-        const MAX_TIME = 10;
-        const MAX_SCORE = 1000;
-
-        elapsed = Math.min(elapsed, MAX_TIME);
-        let currentScore = Math.round(MAX_SCORE * ((MAX_TIME - elapsed) / MAX_TIME));
-        currentScore = Math.max(currentScore, 0);
-
-        rewardScore += currentScore;
-        document.getElementById("scoreDisplay").innerText = score;
+        //document.getElementById("scoreDisplay").innerText = score;
 
         socket.emit("update_score", {
             score: score,
-            user_id: USER_ID,
+            user_id: myId,
             room: ROOM_ID
         });
 
