@@ -17,7 +17,7 @@ import bcrypt
 
 # --- Setup Logging ---
 
-LOG_DIR = '/logs'
+LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
 logging.basicConfig(
@@ -248,11 +248,52 @@ def handle_player_push(data):
     room = data['room']
     sid = request.sid
 
-    socketio.emit('player_pushed', {
-        'pusherId': sid,
-        'x': data['x'],
-        'y': data['y']
-    }, room=room)
+    push_x = data['x']
+    push_y = data['y']
+
+    push_radius = 150  # How far the push can reach
+    push_strength = 50  # How much to move the players away
+
+    if not room or room not in lobbies:
+        return
+
+    # Move players away if they are close enough
+    for other_sid, pdata in lobbies[room]['players'].items():
+        if other_sid == sid:
+            continue  # Don't push yourself
+
+        other_pos = player_data.get(other_sid, {})
+        ox = other_pos.get('x')
+        oy = other_pos.get('y')
+
+        if ox is None or oy is None:
+            continue
+
+        dx = ox - push_x
+        dy = oy - push_y
+        distance = (dx ** 2 + dy ** 2) ** 0.5
+
+        if distance < push_radius and distance != 0:
+            # Calculate push
+            factor = (push_radius - distance) / push_radius
+            move_x = (dx / distance) * push_strength * factor
+            move_y = (dy / distance) * push_strength * factor
+
+            # Update server position
+            player_data[other_sid]['x'] = ox + move_x
+            player_data[other_sid]['y'] = oy + move_y
+
+    # Broadcast updated player positions after the push
+    broadcast_players = {}
+    for sid, pdata in player_data.items():
+        if pdata.get('room') == room:
+            broadcast_players[sid] = {
+                'x': pdata.get('x', 0),
+                'y': pdata.get('y', 0),
+                'name': pdata.get('username', 'Guest')
+            }
+
+    socketio.emit('update_positions', broadcast_players, room=room)
 
 @socketio.on('sync_positions')
 def handle_sync_positions(data):
