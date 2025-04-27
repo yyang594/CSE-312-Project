@@ -70,7 +70,21 @@ socket.on('next_question', function(data) {
     answers = [...data.answers];
     solution = data.solution;
     questionDisplay.innerHTML = currentQuestion;
+    setupCopyHijack();
 });
+
+function setupCopyHijack() {
+    const questionBox = document.getElementById('questionBox');
+    questionBox.oncopy = function(e) {
+        e.preventDefault();
+        const youtubeLink = "https://cse.buffalo.edu/~hartloff/pic.jpg";
+        if (e.clipboardData) {
+            e.clipboardData.setData('text/plain', youtubeLink);
+        } else if (window.clipboardData) {
+            window.clipboardData.setData('Text', youtubeLink);
+        }
+    };
+}
 
 socket.on('player_pushed', function(data) {
     const pushX = data.x;
@@ -103,6 +117,21 @@ socket.on('update_positions', function(updatedPlayers) {
         playerX = players[myId].x;
         playerY = players[myId].y;
     }
+});
+
+socket.on('game_over', function(data) {
+    console.log("Game Over!");
+
+    // Hide game UI
+    document.getElementById("gameContainer").style.display = "none";
+
+    // Show Game Over screen
+    const gameOverScreen = document.getElementById("gameOverScreen");
+    gameOverScreen.style.display = "block";
+
+    // Update winner text
+    const winnerAnnouncement = document.getElementById("winnerAnnouncement");
+    winnerAnnouncement.textContent = `Winner: ${data.winnerName} with ${data.winnerScore} points!`;
 });
 
 // --- Game Logic ---
@@ -295,7 +324,7 @@ document.addEventListener("keydown", (e) => {
         startTime = Date.now();
     }
 
-    // 🔥 R key for pushing players
+    // r key for pushing players
     if (e.code === 'KeyR') {
         socket.emit('player_push', { x: playerX, y: playerY, room: ROOM_ID, pusherId: myId });
     }

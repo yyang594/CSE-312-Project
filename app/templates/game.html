@@ -50,6 +50,12 @@
   </div>
 </div>
 
+<div id="gameOverScreen" style="display: none; text-align: center; margin-top: 50px;">
+  <h2>Game Over!</h2>
+  <p id="winnerAnnouncement">Winner: TBD</p>
+  <button onclick="location.reload()">Play Again</button>
+</div>
+
 <script>
     const ROOM_ID = "{{ room }}";
 </script>
@@ -85,6 +91,22 @@
       playerItem.innerHTML = `${player.username}: <strong>${player.score} pts</strong>`;
       playerListElement.appendChild(playerItem);
     });
+  });
+
+  // ADD: Listen for game over from server
+  socket.on('game_over', function(data) {
+    console.log("Game Over!");
+
+    // Hide game container
+    document.getElementById("gameContainer").style.display = "none";
+
+    // Show Game Over screen
+    const gameOverScreen = document.getElementById("gameOverScreen");
+    gameOverScreen.style.display = "block";
+
+    // Show winner
+    const winnerAnnouncement = document.getElementById("winnerAnnouncement");
+    winnerAnnouncement.textContent = `Winner: ${data.winnerName} with ${data.winnerScore} points!`;
   });
 
   function handleUploadPfp(event) {
