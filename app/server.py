@@ -215,7 +215,7 @@ player_ready = {}
 
 
 # https://opentdb.com/api.php?amount=${amount}&category=18&difficulty=medium&type=multiple
-def fetch_trivia_questions(amount=10):
+def fetch_trivia_questions(amount=50):
     response = requests.get(f"https://opentdb.com/api.php?amount={amount}&category=18&difficulty=medium&type=multiple")
     data = response.json()
     questions = []
@@ -235,7 +235,6 @@ def fetch_trivia_questions(amount=10):
             'answers': all_answers,
             'solution': correct
         })
-
     return questions
 
 
