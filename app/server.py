@@ -163,17 +163,39 @@ def handle_request_next_question(data):
     questions = lobbies.get(room, {}).get('questions', [])
 
     if questions:
-        next_question = questions.pop(0)  # Get and remove the next question
+        next_question = questions.pop(0)
+
+        # Before sending the question, save the correct answer's box
+        correct_index = next_question['answers'].index(next_question['solution'])
+
+        # Find the correct box (same order as frontend)
+        canvas_width = 1920 - 275  # Match your frontend Canvas width
+        canvas_height = 1080
+
+        rect_width = canvas_width * 0.4
+        rect_height = canvas_height * 0.4
+
+        if correct_index == 0:
+            correct_zone = (0, 0, rect_width, rect_height)
+        elif correct_index == 1:
+            correct_zone = (canvas_width - rect_width, 0, rect_width, rect_height)
+        elif correct_index == 2:
+            correct_zone = (0, canvas_height - rect_height, rect_width, rect_height)
+        elif correct_index == 3:
+            correct_zone = (canvas_width - rect_width, canvas_height - rect_height, rect_width, rect_height)
+        else:
+            correct_zone = None  # Shouldn't happen
+
+        # 🚀 Save correct zone on server
+        lobbies[room]['correct_zone'] = correct_zone
+
         socketio.emit('next_question', next_question, room=room)
+
     else:
         print(f"No more questions left in room {room}. Game Over!")
 
-        # Find winner
         players = lobbies.get(room, {}).get('players', {})
         if players:
-
-            # Example: players[sid]['score'] = player's final score
-
             winner_sid = max(players, key=lambda sid: players[sid].get('score', 0))
             winner = players[winner_sid]
 
@@ -199,10 +221,19 @@ def log_request():
 
 player_data = {}
 
+
 @socketio.on('move')
 def handle_move(data):
     sid = request.sid
     user = player_data.get(sid, {})
+
+    # ✅ Update the player's own server position
+    user['x'] = data['x']
+    user['y'] = data['y']
+
+    # Update player_data dictionary
+    player_data[sid] = user
+
     data.update({
         'name': user.get('username', 'Guest'),
         'image': user.get('profile_image', '/static/uploads/default.jpg'),
@@ -258,6 +289,54 @@ def handle_connect():
 
     player_data[request.sid] = {"username": username}
     print(f"{username} connected with ID {request.sid}")
+
+@socketio.on('submit_answer')
+def handle_submit_answer(data):
+    sid = request.sid
+    room = player_data.get(sid, {}).get('room')
+    x = data['x']
+    y = data['y']
+
+    if not room or room not in lobbies:
+        return
+
+    correct_zone = lobbies[room].get('correct_zone')
+    if not correct_zone:
+        return
+
+    zone_x, zone_y, zone_w, zone_h = correct_zone
+
+    if zone_x <= x <= zone_x + zone_w and zone_y <= y <= zone_y + zone_h:
+        # Player answered correctly!
+        lobbies[room]['players'][sid]['score'] = lobbies[room]['players'][sid].get('score', 0) + 200
+
+    # Update all players with new scores
+    player_scores = [
+        {'username': player['username'], 'score': player.get('score', 0)}
+        for player in lobbies[room]['players'].values()
+    ]
+    socketio.emit('update_player_scores', player_scores, room=room)
+
+@socketio.on('update_score')
+def handle_update_score(data):
+    sid = request.sid
+    room = player_data.get(sid, {}).get('room')
+    score = data.get('score', 0)
+
+    if room and sid in lobbies.get(room, {}).get('players', {}):
+        lobbies[room]['players'][sid]['score'] = score
+
+        # After updating, broadcast new scores
+        player_scores = sorted(
+            [
+                {'username': player['username'], 'score': player.get('score', 0)}
+                for player in lobbies[room]['players'].values()
+            ],
+            key=lambda p: p['score'],
+            reverse=True
+        )
+
+        socketio.emit('update_player_scores', player_scores, room=room)
 
 # --- Set up avatar uploads
 
