@@ -86,6 +86,7 @@ function setupCopyHijack() {
     };
 }
 
+
 socket.on('player_pushed', function(data) {
     const pushX = data.x;
     const pushY = data.y;
@@ -117,21 +118,6 @@ socket.on('update_positions', function(updatedPlayers) {
         playerX = players[myId].x;
         playerY = players[myId].y;
     }
-});
-
-socket.on('game_over', function(data) {
-    console.log("Game Over!");
-
-    // Hide game UI
-    document.getElementById("gameContainer").style.display = "none";
-
-    // Show Game Over screen
-    const gameOverScreen = document.getElementById("gameOverScreen");
-    gameOverScreen.style.display = "block";
-
-    // Update winner text
-    const winnerAnnouncement = document.getElementById("winnerAnnouncement");
-    winnerAnnouncement.textContent = `Winner: ${data.winnerName} with ${data.winnerScore} points!`;
 });
 
 // --- Game Logic ---
@@ -317,7 +303,7 @@ document.addEventListener("keydown", (e) => {
         startTime = Date.now();
     }
 
-    // r key for pushing players
+    // 🔥 R key for pushing players
     if (e.code === 'KeyR') {
         socket.emit('player_push', { x: playerX, y: playerY, room: ROOM_ID, pusherId: myId });
     }
