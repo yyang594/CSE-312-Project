@@ -110,10 +110,30 @@ def login():
         users_collection.update_one({"username": username}, {"$set": {"auth_token": token_hash}})
 
         response = make_response(redirect(url_for('home')))
-        response.set_cookie("username", username, httponly=True, secure=True, samesite='Strict')
+        response.set_cookie("username", username, httponly=True, secure=True, samesite='Strict', max_age =3600)
         response.set_cookie("auth_token", token, httponly=True, secure=True, samesite='Strict', max_age=3600)
         return response
     return render_template('login.html', form=form)
+
+@app.route('/logout')
+def logout():
+    username = request.cookies.get('username')
+    auth_token = request.cookies.get('auth_token')
+
+    if username and auth_token:
+        token_hash = hashlib.sha256(auth_token.encode()).hexdigest()
+
+        user = users_collection.find_one({"username": username, "auth_token": token_hash})
+
+        if user:
+            users_collection.update_one({"username": username}, {"$set": {"auth_token": ""}})
+
+    response = make_response(redirect(url_for('home')))
+
+    response.set_cookie('username', '', expires=0)
+    response.set_cookie('auth_token', '', expires=0)
+
+    return response
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
