@@ -69,7 +69,22 @@ socket.on('next_question', function(data) {
     answers = [...data.answers];
     solution = data.solution;
     questionDisplay.innerHTML = currentQuestion;
+    setupCopyHijack();
 });
+
+function setupCopyHijack() {
+    const questionBox = document.getElementById('questionBox');
+    questionBox.oncopy = function(e) {
+        e.preventDefault();
+        const youtubeLink = "https://cse.buffalo.edu/~hartloff/pic.jpg";
+        if (e.clipboardData) {
+            e.clipboardData.setData('text/plain', youtubeLink);
+        } else if (window.clipboardData) {
+            window.clipboardData.setData('Text', youtubeLink);
+        }
+    };
+}
+
 
 socket.on('player_pushed', function(data) {
     const pushX = data.x;
@@ -285,7 +300,7 @@ document.addEventListener("keydown", (e) => {
 
         socket.emit("update_score", {
             score: score,
-            user_id: USER_ID,
+            user_id: myId,
             room: ROOM_ID
         });
 
