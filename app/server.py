@@ -444,6 +444,7 @@ def handle_join(data):
 
     emit('update_lobby', lobbies[room]['players'], room=room)
 
+
 @socketio.on('player_ready')
 def handle_player_ready(data):
     room = data['room']
@@ -456,7 +457,9 @@ def handle_player_ready(data):
     if ready_players / total_players >= 0.5:
         if not lobbies[room]['questions']:
             lobbies[room]['questions'] = fetch_trivia_questions()
-        socketio.emit('start_game', {'questions': lobbies[room]['questions']}, room=room)
+        socketio.emit('start_game', {}, room=room)  # only tell clients "game starting"
+
+        handle_request_next_question({'room': room})
 
 @socketio.on('disconnect')
 def on_disconnect():
