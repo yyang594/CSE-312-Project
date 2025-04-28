@@ -51,6 +51,7 @@ socket.on('next_question', function(data) {
     answers = [...data.answers];
     solution = data.solution;
     questionDisplay.innerHTML = currentQuestion;
+    startTimer()
 });
 
 socket.on('update_positions', function(updatedPlayers) {
@@ -125,9 +126,6 @@ function countdown() {
             y: playerY,
             room: ROOM_ID
         });
-
-        requestNewQuestion();
-        startTimer();
     }
 }
 
