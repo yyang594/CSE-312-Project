@@ -6,13 +6,17 @@ let myId = null;
 
 let questionSet = {};
 let intervalId;
-let maxTime = 5;
+let maxTime = 20;
 let totalTime = maxTime;
 let playerState = "Default";
 let currentQuestion;
 let answers;
 let solution;
 let solutionParameter = [];
+let correctCount = 0;
+let yourFinalScore = 0;
+let yourPlayerName = "";
+
 
 const canvas = document.getElementById("Canvas");
 const ctx = canvas.getContext("2d");
@@ -36,6 +40,9 @@ socket.on('player_moved', function(data) {
         y: data.y,
         name: data.name
     };
+    if (data.id === myId) {
+        yourPlayerName = data.name;  // save local name
+    }
 });
 
 socket.on('start_game', function() {
@@ -50,45 +57,6 @@ socket.on('next_question', function(data) {
     answers = [...data.answers];
     solution = data.solution;
     questionDisplay.innerHTML = currentQuestion;
-    setupCopyHijack();
-});
-
-function setupCopyHijack() {
-    const questionBox = document.getElementById('questionBox');
-    questionBox.oncopy = function(e) {
-        e.preventDefault();
-        const youtubeLink = "https://cse.buffalo.edu/~hartloff/pic.jpg";
-        if (e.clipboardData) {
-            e.clipboardData.setData('text/plain', youtubeLink);
-        } else if (window.clipboardData) {
-            window.clipboardData.setData('Text', youtubeLink);
-        }
-    };
-}
-
-
-socket.on('player_pushed', function(data) {
-    const pushX = data.x;
-    const pushY = data.y;
-    const pushRadius = 100;
-    const pushStrength = 50;
-
-    for (const id in players) {
-        if (id === data.pusherId) continue;
-
-        const other = players[id];
-        const dx = other.x - pushX;
-        const dy = other.y - pushY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance < pushRadius) {
-            const factor = (pushRadius - distance) / pushRadius;
-            players[id].x += (dx / distance) * pushStrength * factor;
-            players[id].y += (dy / distance) * pushStrength * factor;
-        }
-    }
-
-    socket.emit('sync_positions', { players: players, room: ROOM_ID });
     startTimer()
 });
 
@@ -118,20 +86,10 @@ socket.on('game_over', function(data) {
     document.getElementById("gameContainer").style.display = "none";
     document.getElementById("gameOverScreen").style.display = "block";
     document.getElementById("winnerAnnouncement").textContent = `Winner: ${data.winnerName} with ${data.winnerScore} points!`;
-    data = {
-        "player": data.winnerName,
-        "wins": 0,
-        "correct": 0
-    }
-    fetch('/leaderboard', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-    })
+    const didWin = (data.winnerName === yourPlayerName);
+    submitGameResult(correctCount, yourFinalScore, didWin);
 });
+
 
 // --- Game Logic ---
 
@@ -163,16 +121,25 @@ function countdown() {
     updateTimerDisplay();
 
     if (totalTime <= 0) {
-        if (playerX > solutionParameter[0] && playerX < rectXBound && playerY > solutionParameter[1] && playerY < rectYBound) {
-            console.log(`REWARD SCORE: ${rewardScore}`)
-            playerScore += rewardScore;
-            rewardScore = 200
-            console.log("You got the question right!");
-            console.log(`Your score is: ${playerScore}`);
-        }
-
         clearInterval(intervalId);
         playerState = "Default";
+
+        // ✅ Check if player is inside the correct answer zone
+        if (solutionParameter.length === 4) {
+            const [x, y, w, h] = solutionParameter;
+
+            const inZone = (
+                playerX >= x &&
+                playerX <= x + w &&
+                playerY >= y &&
+                playerY <= y + h
+            );
+
+            if (inZone) {
+                correctCount++;
+                yourFinalScore += 200;
+            }
+        }
 
         // 🚀 Send my player position to server
         socket.emit('submit_answer', {
@@ -182,6 +149,14 @@ function countdown() {
         });
     }
 }
+function submitGameResult(correctAnswers, score, didWin) {
+    socket.emit("game_result", {
+        correctAnswers: correctAnswers,
+        score: score,
+        didWin: didWin
+    });
+}
+
 
 function updateTimerDisplay() {
     timerElement.innerHTML = "00:" + (totalTime < 10 ? "0" + totalTime : totalTime);
@@ -285,33 +260,13 @@ function gameLoop() {
 document.addEventListener("keydown", (e) => {
     keysPressed.add(e.key.toLowerCase());
 
-    if (e.code === 'Space') {
-        e.preventDefault();
-        if (playerState === "Locked") return;
-
-        playerState = "Locked";
-        
-        rewardScore += totalTime;
-        console.log(`TO ADD: ${totalTime}`)
-
-        //document.getElementById("scoreDisplay").innerText = score;
-
-        socket.emit("update_score", {
-            score: score,
-            user_id: myId,
+    if (e.code === 'KeyR') {
+        // When player presses R, send push event
+        socket.emit('player_push', {
+            x: playerX,
+            y: playerY,
             room: ROOM_ID
         });
-
-        startTime = Date.now();
-    }
-
-    // 🔥 R key for pushing players
-    if (e.code === 'KeyR') {
-        socket.emit('player_push', { x: playerX, y: playerY, room: ROOM_ID, pusherId: myId });
-    }
-
-    if (e.code === 'ShiftLeft') {
-        speed = 15; // Dash
     }
 });
 
