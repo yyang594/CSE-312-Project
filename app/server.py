@@ -64,12 +64,10 @@ class LoginForm(FlaskForm):
         Length(min=6, message='Incorrect Password')
     ])
 
-
 # Routing
 @app.route('/')
 @app.route('/home')
 def home():
-    # Note to self: grab username from db and replace variable with it to display name
     auth_token = request.cookies.get('auth_token')
     username = "Guest"
 
@@ -204,14 +202,6 @@ def handle_request_next_question(data):
                 'winnerScore': winner.get('score', 0)
             }, room=room)
 
-@app.route('/test')
-def test():
-    print("USERS COLLECTION")
-    info = []
-    for item in users_collection.find():
-        info.append(item)
-    return jsonify(info)
-
 @app.before_request
 def log_request():
     ip = request.remote_addr
@@ -220,7 +210,6 @@ def log_request():
     logging.info(f"{ip} {method} {path}")
 
 player_data = {}
-
 
 @socketio.on('move')
 def handle_move(data):
@@ -347,11 +336,59 @@ def handle_submit_answer(data):
 
     zone_x, zone_y, zone_w, zone_h = correct_zone
 
+    # Update player score if they are correct
     if zone_x <= x <= zone_x + zone_w and zone_y <= y <= zone_y + zone_h:
-        # Player answered correctly!
         lobbies[room]['players'][sid]['score'] = lobbies[room]['players'][sid].get('score', 0) + 200
 
-    # Update all players with new scores
+    # Mark that this player answered
+    lobbies[room]['players'][sid]['answered'] = True
+
+    # Check if ALL players have answered
+    all_answered = all(player.get('answered') for player in lobbies[room]['players'].values())
+
+    if all_answered:
+        # Reset "answered" for next round
+        for player in lobbies[room]['players'].values():
+            player['answered'] = False
+
+        # Move to next question
+        if lobbies[room]['questions']:
+            next_question = lobbies[room]['questions'].pop(0)
+
+            # BEFORE emitting next question, set correct_zone
+            correct_index = next_question['answers'].index(next_question['solution'])
+
+            canvas_width = 1024  # match your frontend!
+            canvas_height = 576
+
+            rect_width = canvas_width * 0.4
+            rect_height = canvas_height * 0.4
+
+            if correct_index == 0:
+                correct_zone = (0, 0, rect_width, rect_height)
+            elif correct_index == 1:
+                correct_zone = (canvas_width - rect_width, 0, rect_width, rect_height)
+            elif correct_index == 2:
+                correct_zone = (0, canvas_height - rect_height, rect_width, rect_height)
+            elif correct_index == 3:
+                correct_zone = (canvas_width - rect_width, canvas_height - rect_height, rect_width, rect_height)
+
+            lobbies[room]['correct_zone'] = correct_zone
+
+            socketio.emit('next_question', next_question, room=room)
+
+        else:
+            # No more questions, game over
+            players = lobbies.get(room, {}).get('players', {})
+            winner_sid = max(players, key=lambda sid: players[sid].get('score', 0))
+            winner = players[winner_sid]
+
+            socketio.emit('game_over', {
+                'winnerName': winner['username'],
+                'winnerScore': winner.get('score', 0)
+            }, room=room)
+
+    # Update player scores
     player_scores = [
         {'username': player['username'], 'score': player.get('score', 0)}
         for player in lobbies[room]['players'].values()
@@ -427,6 +464,7 @@ def handle_join(data):
 
     emit('update_lobby', lobbies[room]['players'], room=room)
 
+
 @socketio.on('player_ready')
 def handle_player_ready(data):
     room = data['room']
@@ -439,7 +477,9 @@ def handle_player_ready(data):
     if ready_players / total_players >= 0.5:
         if not lobbies[room]['questions']:
             lobbies[room]['questions'] = fetch_trivia_questions()
-        socketio.emit('start_game', {'questions': lobbies[room]['questions']}, room=room)
+        socketio.emit('start_game', {}, room=room)  # only tell clients "game starting"
+
+        handle_request_next_question({'room': room})
 
 @socketio.on('disconnect')
 def on_disconnect():
@@ -459,5 +499,4 @@ def on_disconnect():
     player_data.pop(sid, None)
 
 if __name__ == '__main__':
-    # DELETE DEBUG LATER
     socketio.run(app, host='0.0.0.0', port=8080, allow_unsafe_werkzeug=True, debug=False)

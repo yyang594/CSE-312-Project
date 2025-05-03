@@ -38,11 +38,10 @@ socket.on('player_moved', function(data) {
     };
 });
 
-socket.on('start_game', function(data) {
+socket.on('start_game', function() {
     document.getElementById("waitingRoom").style.display = "none";
     document.getElementById("gameContainer").style.display = "block";
 
-    loadQuestions(data.questions);
     startGame();
 });
 
@@ -51,6 +50,7 @@ socket.on('next_question', function(data) {
     answers = [...data.answers];
     solution = data.solution;
     questionDisplay.innerHTML = currentQuestion;
+    startTimer()
 });
 
 socket.on('update_positions', function(updatedPlayers) {
@@ -94,13 +94,8 @@ function startGame() {
     if (gameRunning) return;
     gameRunning = true;
 
-    requestNewQuestion();
     startTimer();
     requestAnimationFrame(gameLoop);
-}
-
-function requestNewQuestion() {
-    socket.emit('request_next_question', { room: ROOM_ID });
 }
 
 function startTimer() {
@@ -125,9 +120,6 @@ function countdown() {
             y: playerY,
             room: ROOM_ID
         });
-
-        requestNewQuestion();
-        startTimer();
     }
 }
 
