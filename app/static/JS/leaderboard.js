@@ -1,9 +1,10 @@
-let leaderboardData = [];
+let leaderboardData = [{ player: "Test", wins: 999, correct: 999 }];
 /*
     { player: "Alice", wins: 12, correct: 54 },
     { player: "Bob", wins: 9, correct: 45 },
     { player: "Charlie", wins: 5, correct: 49 }
 */
+/*
 fetch('/getInfo')
   .then(response => response.json())
   .then(data => {
@@ -11,6 +12,22 @@ fetch('/getInfo')
     leaderboardData = data
   })
   .catch(error => console.error('Error fetching data:', error));
+
+console.log("LEADER BOARD STUFF:")
+console.log(leaderboardData)
+*/
+async function loadAndSortLeaderboard() {
+    try {
+        const response = await fetch('/getInfo');
+        const data = await response.json();
+        console.log("Received data from Flask:", data);
+
+        leaderboardData = data;
+        sortLeaderboard();  // Only called after data is fetched
+    } catch (error) {
+        console.error('Error fetching data:', error);
+    }
+}
 
 function sortLeaderboard() {
     const sortBy = document.getElementById("sortSelect").value;
@@ -34,6 +51,8 @@ function sortLeaderboard() {
         tbody.appendChild(row);
     });
 }
+
+document.addEventListener("DOMContentLoaded", loadAndSortLeaderboard);
 
 // Initial sort on page load
 document.addEventListener("DOMContentLoaded", sortLeaderboard);

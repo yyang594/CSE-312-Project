@@ -17,7 +17,7 @@ import hashlib
 import bcrypt
 
 # --- Setup Logging ---
-'''
+
 LOG_DIR = '/logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -27,7 +27,6 @@ logging.basicConfig(
     format='[%(asctime)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-'''
 
 # Separate logger for raw requests/responses (full.log)
 full_log_path = os.path.join(LOG_DIR, 'full.log')
@@ -152,16 +151,24 @@ def login():
 def leaderboard():
     if request.method == 'POST':
         data = request.get_json()
-        #print("Received data:", data, flush=True)
+        print("Received data:", data, flush=True)
 
-        if('auth_token' in request.cookies):
-            #    { player: "Alice", wins: 12, correct: 54 }
-            toInsert = {
-                "player": data["winner"],
-                "wins": 1,
-                "correct": data["correct_answers"]
-            }
-            leaderboard_collection.insert_one(toInsert)
+        doesPlayerExist = users_collection.find_one({"username": data["player"]})
+
+        if('auth_token' in request.cookies and doesPlayerExist):
+            if(leaderboard_collection.find_one({"player": data["player"]})):
+                #Player exists
+                leaderboard_collection.update_one({"player": data["player"]},
+                                                  {"$inc": {"wins": 1,
+                                                            "correct": data["correct"]}})
+            else:
+                #Player doesn't exist
+                toInsert = {
+                    "player": data["player"],
+                    "wins": 1,
+                    "correct": data["correct"]
+                }
+                leaderboard_collection.insert_one(toInsert)
 
     return render_template('leaderboard.html')
 

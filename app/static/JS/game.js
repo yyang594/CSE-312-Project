@@ -92,7 +92,7 @@ socket.on('game_over', function(data) {
     data = {
         "player": data.winnerName,
         "wins": 0,
-        "correct": 0
+        "correct": correctCount
     }
     fetch('/leaderboard', {
         method: 'POST',
