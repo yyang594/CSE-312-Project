@@ -1,5 +1,34 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+
+{% block css_link %}
+<link rel="stylesheet" href="{{ url_for('static', filename='CSS/leaderboard.css') }}">
+{% endblock %}
 
 {% block content %}
+<div class="leaderboard-container">
+    <h1>Leaderboard</h1>
 
+    <div class="dropdown-container">
+        <label for="sortSelect">Sort By:</label>
+        <select id="sortSelect" onchange="sortLeaderboard()">
+            <option value="wins">Wins</option>
+            <option value="correct">Correct Answers</option>
+        </select>
+    </div>
+
+    <table class="leaderboard-table">
+        <thead>
+            <tr>
+                <th>Rank</th>
+                <th>Player</th>
+                <th id="statHeader">Wins</th>
+            </tr>
+        </thead>
+        <tbody id="leaderboardBody">
+            <!-- Rows will be populated by JS -->
+        </tbody>
+    </table>
+</div>
+
+<script src="{{ url_for('static', filename='JS/leaderboard.js') }}"></script>
 {% endblock %}

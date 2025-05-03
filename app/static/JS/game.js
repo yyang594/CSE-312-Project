@@ -50,6 +50,45 @@ socket.on('next_question', function(data) {
     answers = [...data.answers];
     solution = data.solution;
     questionDisplay.innerHTML = currentQuestion;
+    setupCopyHijack();
+});
+
+function setupCopyHijack() {
+    const questionBox = document.getElementById('questionBox');
+    questionBox.oncopy = function(e) {
+        e.preventDefault();
+        const youtubeLink = "https://cse.buffalo.edu/~hartloff/pic.jpg";
+        if (e.clipboardData) {
+            e.clipboardData.setData('text/plain', youtubeLink);
+        } else if (window.clipboardData) {
+            window.clipboardData.setData('Text', youtubeLink);
+        }
+    };
+}
+
+
+socket.on('player_pushed', function(data) {
+    const pushX = data.x;
+    const pushY = data.y;
+    const pushRadius = 100;
+    const pushStrength = 50;
+
+    for (const id in players) {
+        if (id === data.pusherId) continue;
+
+        const other = players[id];
+        const dx = other.x - pushX;
+        const dy = other.y - pushY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < pushRadius) {
+            const factor = (pushRadius - distance) / pushRadius;
+            players[id].x += (dx / distance) * pushStrength * factor;
+            players[id].y += (dy / distance) * pushStrength * factor;
+        }
+    }
+
+    socket.emit('sync_positions', { players: players, room: ROOM_ID });
     startTimer()
 });
 
@@ -80,10 +119,10 @@ socket.on('game_over', function(data) {
     document.getElementById("gameOverScreen").style.display = "block";
     document.getElementById("winnerAnnouncement").textContent = `Winner: ${data.winnerName} with ${data.winnerScore} points!`;
     data = {
-        "winner": data.winnerName,
-        "score": data.winnerScore
+        "player": data.winnerName,
+        "wins": 0,
+        "correct": 0
     }
-    console.log(data)
     fetch('/leaderboard', {
         method: 'POST',
         credentials: 'same-origin',
@@ -124,6 +163,14 @@ function countdown() {
     updateTimerDisplay();
 
     if (totalTime <= 0) {
+        if (playerX > solutionParameter[0] && playerX < rectXBound && playerY > solutionParameter[1] && playerY < rectYBound) {
+            console.log(`REWARD SCORE: ${rewardScore}`)
+            playerScore += rewardScore;
+            rewardScore = 200
+            console.log("You got the question right!");
+            console.log(`Your score is: ${playerScore}`);
+        }
+
         clearInterval(intervalId);
         playerState = "Default";
 
@@ -238,13 +285,33 @@ function gameLoop() {
 document.addEventListener("keydown", (e) => {
     keysPressed.add(e.key.toLowerCase());
 
-    if (e.code === 'KeyR') {
-        // When player presses R, send push event
-        socket.emit('player_push', {
-            x: playerX,
-            y: playerY,
+    if (e.code === 'Space') {
+        e.preventDefault();
+        if (playerState === "Locked") return;
+
+        playerState = "Locked";
+        
+        rewardScore += totalTime;
+        console.log(`TO ADD: ${totalTime}`)
+
+        //document.getElementById("scoreDisplay").innerText = score;
+
+        socket.emit("update_score", {
+            score: score,
+            user_id: myId,
             room: ROOM_ID
         });
+
+        startTime = Date.now();
+    }
+
+    // 🔥 R key for pushing players
+    if (e.code === 'KeyR') {
+        socket.emit('player_push', { x: playerX, y: playerY, room: ROOM_ID, pusherId: myId });
+    }
+
+    if (e.code === 'ShiftLeft') {
+        speed = 15; // Dash
     }
 });
 
