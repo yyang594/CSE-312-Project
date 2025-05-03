@@ -36,6 +36,7 @@ collection = db['items']
 users_collection = db['users']
 questions_collection = db['questions']
 player_collection = db['players']
+leaderboard_collection = db['leaderboard']
 
 # ****Protects against CSRF attacks (CHANGE LATER)****
 app.config['SECRET_KEY'] = 'temporary-very-weak-key'
@@ -86,11 +87,15 @@ def home():
 
     return render_template('home.html', username=username)
 
+@app.route('/leaderboard', methods=['GET','POST'])
+def leaderboard():
+    #top_players = list(leaderboard_collection.find({}, {"_id": 0}).sort("score", -1).limit(10))
+    return render_template('leaderboard.html')
 
 @app.route('/game')
 def game():
     room = request.args.get('room', 'default')
-    return render_template('game.html', room=room)
+    return render_template('login.html', room=room)
 
 
 @app.route('/login', methods=['GET', 'POST'])
