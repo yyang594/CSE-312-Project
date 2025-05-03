@@ -16,7 +16,7 @@ import hashlib
 import bcrypt
 
 # --- Setup Logging ---
-
+'''
 LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -26,6 +26,7 @@ logging.basicConfig(
     format='[%(asctime)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+'''
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -34,9 +35,11 @@ collection = db['items']
 users_collection = db['users']
 questions_collection = db['questions']
 player_collection = db['players']
+leaderboard_collection = db['leaderboard']
 
 # ****Protects against CSRF attacks (CHANGE LATER)****
 app.config['SECRET_KEY'] = 'temporary-very-weak-key'
+
 
 class RegisterForm(FlaskForm):
     username = StringField('Username', [
@@ -88,6 +91,22 @@ def lobby():
 def game():
     room = request.args.get('room', 'default')
     return render_template('game.html', room=room)
+
+@app.route('/leaderboard', methods=['GET', 'POST'])
+def leaderboard():
+    if request.method == 'POST':
+        data = request.get_json()
+        print("Received data:", data, flush=True)
+
+        #print("SESSION:", request.cookies.get('session'), flush=True)
+        if('auth_token' in request.cookies):
+            leaderboard_collection.insert_one(data)
+
+        print("CONTENTS OF DATABASE:", flush=True)
+        for item in leaderboard_collection.find():
+            print(item, flush=True)
+
+    return render_template('leaderboard.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

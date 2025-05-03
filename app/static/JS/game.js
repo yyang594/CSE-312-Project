@@ -6,7 +6,7 @@ let myId = null;
 
 let questionSet = {};
 let intervalId;
-let maxTime = 20;
+let maxTime = 5;
 let totalTime = maxTime;
 let playerState = "Default";
 let currentQuestion;
@@ -79,6 +79,19 @@ socket.on('game_over', function(data) {
     document.getElementById("gameContainer").style.display = "none";
     document.getElementById("gameOverScreen").style.display = "block";
     document.getElementById("winnerAnnouncement").textContent = `Winner: ${data.winnerName} with ${data.winnerScore} points!`;
+    data = {
+        "winner": data.winnerName,
+        "score": data.winnerScore
+    }
+    console.log(data)
+    fetch('/leaderboard', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
 });
 
 // --- Game Logic ---
