@@ -13,6 +13,10 @@ let currentQuestion;
 let answers;
 let solution;
 let solutionParameter = [];
+let correctCount = 0;
+let yourFinalScore = 0;
+let yourPlayerName = "";
+
 
 const canvas = document.getElementById("Canvas");
 const ctx = canvas.getContext("2d");
@@ -36,6 +40,9 @@ socket.on('player_moved', function(data) {
         y: data.y,
         name: data.name
     };
+    if (data.id === myId) {
+        yourPlayerName = data.name;  // save local name
+    }
 });
 
 socket.on('start_game', function() {
@@ -79,7 +86,10 @@ socket.on('game_over', function(data) {
     document.getElementById("gameContainer").style.display = "none";
     document.getElementById("gameOverScreen").style.display = "block";
     document.getElementById("winnerAnnouncement").textContent = `Winner: ${data.winnerName} with ${data.winnerScore} points!`;
+    const didWin = (data.winnerName === yourPlayerName);
+    submitGameResult(correctCount, yourFinalScore, didWin);
 });
+
 
 // --- Game Logic ---
 
@@ -114,6 +124,23 @@ function countdown() {
         clearInterval(intervalId);
         playerState = "Default";
 
+        // ✅ Check if player is inside the correct answer zone
+        if (solutionParameter.length === 4) {
+            const [x, y, w, h] = solutionParameter;
+
+            const inZone = (
+                playerX >= x &&
+                playerX <= x + w &&
+                playerY >= y &&
+                playerY <= y + h
+            );
+
+            if (inZone) {
+                correctCount++;
+                yourFinalScore += 200;
+            }
+        }
+
         // 🚀 Send my player position to server
         socket.emit('submit_answer', {
             x: playerX,
@@ -122,6 +149,14 @@ function countdown() {
         });
     }
 }
+function submitGameResult(correctAnswers, score, didWin) {
+    socket.emit("game_result", {
+        correctAnswers: correctAnswers,
+        score: score,
+        didWin: didWin
+    });
+}
+
 
 function updateTimerDisplay() {
     timerElement.innerHTML = "00:" + (totalTime < 10 ? "0" + totalTime : totalTime);

@@ -111,6 +111,25 @@ def login():
         return response
     return render_template('login.html', form=form)
 
+@app.route('/stats')
+def stats():
+    auth_token = request.cookies.get('auth_token')
+    username = "Guest"
+    stats = {"answers_correct": 0, "games_won": 0, "max_score": 0}
+
+    if auth_token:
+        token_hash = hashlib.sha256(auth_token.encode()).hexdigest()
+        user = users_collection.find_one({"auth_token": token_hash})
+        if user:
+            username = user['username']
+            stats = {
+                "answers_correct": user.get("answers_correct", 0),
+                "games_won": user.get("games_won", 0),
+                "max_score": user.get("max_score", 0)
+            }
+
+    return render_template("stats.html", username=username, stats=stats)
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm(request.form)
@@ -128,7 +147,11 @@ def register():
         hashed_pw = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
         users_collection.insert_one({
             "username": username,
-            "password": hashed_pw
+            "password": hashed_pw,
+            "answers_correct": 0,
+            "games_won": 0,
+            "max_score": 0,
+            "profile_image": "/static/uploads/default.jpg"
         })
 
         return redirect(url_for('home'))
@@ -460,6 +483,30 @@ def handle_player_ready(data):
         socketio.emit('start_game', {}, room=room)  # only tell clients "game starting"
 
         handle_request_next_question({'room': room})
+
+@socketio.on('game_result')
+def handle_game_result(data):
+    auth_token = request.cookies.get('auth_token')
+    if not auth_token:
+        return
+    token_hash = hashlib.sha256(auth_token.encode()).hexdigest()
+    user = users_collection.find_one({"auth_token": token_hash})
+    if not user:
+        return
+    # Extract stats
+    correct = int(data.get('correctAnswers', 0))
+    score = int(data.get('score', 0))
+    did_win = bool(data.get('didWin', False))
+    updates = {
+        "$inc": {
+            "answers_correct": correct,
+            "games_won": 1 if did_win else 0
+        },
+        "$max": {
+            "max_score": score
+        }
+    }
+    users_collection.update_one({"_id": user['_id']}, updates)
 
 @socketio.on('disconnect')
 def on_disconnect():
