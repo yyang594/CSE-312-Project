@@ -17,8 +17,7 @@ import bcrypt
 
 # --- Setup Logging ---
 
-"""
-LOG_DIR = '/logs'
+LOG_DIR = 'logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
 logging.basicConfig(
@@ -27,7 +26,6 @@ logging.basicConfig(
     format='[%(asctime)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-"""
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -66,12 +64,10 @@ class LoginForm(FlaskForm):
         Length(min=6, message='Incorrect Password')
     ])
 
-
 # Routing
 @app.route('/')
 @app.route('/home')
 def home():
-    # Note to self: grab username from db and replace variable with it to display name
     auth_token = request.cookies.get('auth_token')
     username = "Guest"
 
@@ -110,30 +106,10 @@ def login():
         users_collection.update_one({"username": username}, {"$set": {"auth_token": token_hash}})
 
         response = make_response(redirect(url_for('home')))
-        response.set_cookie("username", username, httponly=True, secure=True, samesite='Strict', max_age =3600)
+        response.set_cookie("username", username, httponly=True, secure=True, samesite='Strict')
         response.set_cookie("auth_token", token, httponly=True, secure=True, samesite='Strict', max_age=3600)
         return response
     return render_template('login.html', form=form)
-
-@app.route('/logout')
-def logout():
-    username = request.cookies.get('username')
-    auth_token = request.cookies.get('auth_token')
-
-    if username and auth_token:
-        token_hash = hashlib.sha256(auth_token.encode()).hexdigest()
-
-        user = users_collection.find_one({"username": username, "auth_token": token_hash})
-
-        if user:
-            users_collection.update_one({"username": username}, {"$set": {"auth_token": ""}})
-
-    response = make_response(redirect(url_for('home')))
-
-    response.set_cookie('username', '', expires=0)
-    response.set_cookie('auth_token', '', expires=0)
-
-    return response
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -165,17 +141,39 @@ def handle_request_next_question(data):
     questions = lobbies.get(room, {}).get('questions', [])
 
     if questions:
-        next_question = questions.pop(0)  # Get and remove the next question
+        next_question = questions.pop(0)
+
+        # Before sending the question, save the correct answer's box
+        correct_index = next_question['answers'].index(next_question['solution'])
+
+        # Find the correct box (same order as frontend)
+        canvas_width = 1920 - 275  # Match your frontend Canvas width
+        canvas_height = 1080
+
+        rect_width = canvas_width * 0.4
+        rect_height = canvas_height * 0.4
+
+        if correct_index == 0:
+            correct_zone = (0, 0, rect_width, rect_height)
+        elif correct_index == 1:
+            correct_zone = (canvas_width - rect_width, 0, rect_width, rect_height)
+        elif correct_index == 2:
+            correct_zone = (0, canvas_height - rect_height, rect_width, rect_height)
+        elif correct_index == 3:
+            correct_zone = (canvas_width - rect_width, canvas_height - rect_height, rect_width, rect_height)
+        else:
+            correct_zone = None  # Shouldn't happen
+
+        # 🚀 Save correct zone on server
+        lobbies[room]['correct_zone'] = correct_zone
+
         socketio.emit('next_question', next_question, room=room)
+
     else:
         print(f"No more questions left in room {room}. Game Over!")
 
-        # Find winner
         players = lobbies.get(room, {}).get('players', {})
         if players:
-
-            # Example: players[sid]['score'] = player's final score
-
             winner_sid = max(players, key=lambda sid: players[sid].get('score', 0))
             winner = players[winner_sid]
 
@@ -183,14 +181,6 @@ def handle_request_next_question(data):
                 'winnerName': winner['username'],
                 'winnerScore': winner.get('score', 0)
             }, room=room)
-
-@app.route('/test')
-def test():
-    print("USERS COLLECTION")
-    info = []
-    for item in users_collection.find():
-        info.append(item)
-    return jsonify(info)
 
 @app.before_request
 def log_request():
@@ -205,6 +195,14 @@ player_data = {}
 def handle_move(data):
     sid = request.sid
     user = player_data.get(sid, {})
+
+    # ✅ Update the player's own server position
+    user['x'] = data['x']
+    user['y'] = data['y']
+
+    # Update player_data dictionary
+    player_data[sid] = user
+
     data.update({
         'name': user.get('username', 'Guest'),
         'image': user.get('profile_image', '/static/uploads/default.jpg'),
@@ -219,11 +217,52 @@ def handle_player_push(data):
     room = data['room']
     sid = request.sid
 
-    socketio.emit('player_pushed', {
-        'pusherId': sid,
-        'x': data['x'],
-        'y': data['y']
-    }, room=room)
+    push_x = data['x']
+    push_y = data['y']
+
+    push_radius = 150  # How far the push can reach
+    push_strength = 50  # How much to move the players away
+
+    if not room or room not in lobbies:
+        return
+
+    # Move players away if they are close enough
+    for other_sid, pdata in lobbies[room]['players'].items():
+        if other_sid == sid:
+            continue  # Don't push yourself
+
+        other_pos = player_data.get(other_sid, {})
+        ox = other_pos.get('x')
+        oy = other_pos.get('y')
+
+        if ox is None or oy is None:
+            continue
+
+        dx = ox - push_x
+        dy = oy - push_y
+        distance = (dx ** 2 + dy ** 2) ** 0.5
+
+        if distance < push_radius and distance != 0:
+            # Calculate push
+            factor = (push_radius - distance) / push_radius
+            move_x = (dx / distance) * push_strength * factor
+            move_y = (dy / distance) * push_strength * factor
+
+            # Update server position
+            player_data[other_sid]['x'] = ox + move_x
+            player_data[other_sid]['y'] = oy + move_y
+
+    # Broadcast updated player positions after the push
+    broadcast_players = {}
+    for sid, pdata in player_data.items():
+        if pdata.get('room') == room:
+            broadcast_players[sid] = {
+                'x': pdata.get('x', 0),
+                'y': pdata.get('y', 0),
+                'name': pdata.get('username', 'Guest')
+            }
+
+    socketio.emit('update_positions', broadcast_players, room=room)
 
 @socketio.on('sync_positions')
 def handle_sync_positions(data):
@@ -260,6 +299,102 @@ def handle_connect():
 
     player_data[request.sid] = {"username": username}
     print(f"{username} connected with ID {request.sid}")
+
+@socketio.on('submit_answer')
+def handle_submit_answer(data):
+    sid = request.sid
+    room = player_data.get(sid, {}).get('room')
+    x = data['x']
+    y = data['y']
+
+    if not room or room not in lobbies:
+        return
+
+    correct_zone = lobbies[room].get('correct_zone')
+    if not correct_zone:
+        return
+
+    zone_x, zone_y, zone_w, zone_h = correct_zone
+
+    # Update player score if they are correct
+    if zone_x <= x <= zone_x + zone_w and zone_y <= y <= zone_y + zone_h:
+        lobbies[room]['players'][sid]['score'] = lobbies[room]['players'][sid].get('score', 0) + 200
+
+    # Mark that this player answered
+    lobbies[room]['players'][sid]['answered'] = True
+
+    # Check if ALL players have answered
+    all_answered = all(player.get('answered') for player in lobbies[room]['players'].values())
+
+    if all_answered:
+        # Reset "answered" for next round
+        for player in lobbies[room]['players'].values():
+            player['answered'] = False
+
+        # Move to next question
+        if lobbies[room]['questions']:
+            next_question = lobbies[room]['questions'].pop(0)
+
+            # BEFORE emitting next question, set correct_zone
+            correct_index = next_question['answers'].index(next_question['solution'])
+
+            canvas_width = 1024  # match your frontend!
+            canvas_height = 576
+
+            rect_width = canvas_width * 0.4
+            rect_height = canvas_height * 0.4
+
+            if correct_index == 0:
+                correct_zone = (0, 0, rect_width, rect_height)
+            elif correct_index == 1:
+                correct_zone = (canvas_width - rect_width, 0, rect_width, rect_height)
+            elif correct_index == 2:
+                correct_zone = (0, canvas_height - rect_height, rect_width, rect_height)
+            elif correct_index == 3:
+                correct_zone = (canvas_width - rect_width, canvas_height - rect_height, rect_width, rect_height)
+
+            lobbies[room]['correct_zone'] = correct_zone
+
+            socketio.emit('next_question', next_question, room=room)
+
+        else:
+            # No more questions, game over
+            players = lobbies.get(room, {}).get('players', {})
+            winner_sid = max(players, key=lambda sid: players[sid].get('score', 0))
+            winner = players[winner_sid]
+
+            socketio.emit('game_over', {
+                'winnerName': winner['username'],
+                'winnerScore': winner.get('score', 0)
+            }, room=room)
+
+    # Update player scores
+    player_scores = [
+        {'username': player['username'], 'score': player.get('score', 0)}
+        for player in lobbies[room]['players'].values()
+    ]
+    socketio.emit('update_player_scores', player_scores, room=room)
+
+@socketio.on('update_score')
+def handle_update_score(data):
+    sid = request.sid
+    room = player_data.get(sid, {}).get('room')
+    score = data.get('score', 0)
+
+    if room and sid in lobbies.get(room, {}).get('players', {}):
+        lobbies[room]['players'][sid]['score'] = score
+
+        # After updating, broadcast new scores
+        player_scores = sorted(
+            [
+                {'username': player['username'], 'score': player.get('score', 0)}
+                for player in lobbies[room]['players'].values()
+            ],
+            key=lambda p: p['score'],
+            reverse=True
+        )
+
+        socketio.emit('update_player_scores', player_scores, room=room)
 
 # --- Set up avatar uploads
 
@@ -309,6 +444,7 @@ def handle_join(data):
 
     emit('update_lobby', lobbies[room]['players'], room=room)
 
+
 @socketio.on('player_ready')
 def handle_player_ready(data):
     room = data['room']
@@ -321,7 +457,9 @@ def handle_player_ready(data):
     if ready_players / total_players >= 0.5:
         if not lobbies[room]['questions']:
             lobbies[room]['questions'] = fetch_trivia_questions()
-        socketio.emit('start_game', {'questions': lobbies[room]['questions']}, room=room)
+        socketio.emit('start_game', {}, room=room)  # only tell clients "game starting"
+
+        handle_request_next_question({'room': room})
 
 @socketio.on('disconnect')
 def on_disconnect():
@@ -341,5 +479,4 @@ def on_disconnect():
     player_data.pop(sid, None)
 
 if __name__ == '__main__':
-    # DELETE DEBUG LATER
     socketio.run(app, host='0.0.0.0', port=8080, allow_unsafe_werkzeug=True, debug=False)

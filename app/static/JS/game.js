@@ -3,12 +3,10 @@ const socket = io(); // Connect to WebSocket
 let players = {};
 let gameRunning = false;
 let myId = null;
-let score = 0;
-let startTime = Date.now();
 
-let questionSet = {}; // Questions sent by server
+let questionSet = {};
 let intervalId;
-let maxTime = 30;
+let maxTime = 20;
 let totalTime = maxTime;
 let playerState = "Default";
 let currentQuestion;
@@ -16,14 +14,14 @@ let answers;
 let solution;
 let solutionParameter = [];
 
-let playerScore = 0;
-let rewardScore = 200;
-
 const canvas = document.getElementById("Canvas");
 const ctx = canvas.getContext("2d");
 
 const questionDisplay = document.getElementById("questionBox");
 const timerElement = document.getElementById("timer");
+
+let playerX = 0;
+let playerY = 0;
 
 // --- Socket Events ---
 
@@ -40,29 +38,11 @@ socket.on('player_moved', function(data) {
     };
 });
 
-socket.on("start_game", function(data) {
-    console.log("Received start_game from server");
+socket.on('start_game', function() {
+    document.getElementById("waitingRoom").style.display = "none";
+    document.getElementById("gameContainer").style.display = "block";
 
-    const waitingRoom = document.getElementById("waitingRoom");
-    if (waitingRoom) waitingRoom.style.display = "none";
-
-    const gameContainer = document.getElementById("gameContainer");
-    if (gameContainer) gameContainer.style.display = "block";
-
-    loadQuestions(data.questions);
     startGame();
-});
-
-socket.on('update_lobby', function(players) {
-    const playerList = document.getElementById('player-list');
-    playerList.innerHTML = '';
-
-    for (const id in players) {
-        const player = players[id];
-        const li = document.createElement('li');
-        li.textContent = player.username + (player.ready ? ' ✅' : ' ❌');
-        playerList.appendChild(li);
-    }
 });
 
 socket.on('next_question', function(data) {
@@ -70,68 +50,35 @@ socket.on('next_question', function(data) {
     answers = [...data.answers];
     solution = data.solution;
     questionDisplay.innerHTML = currentQuestion;
-    setupCopyHijack();
-});
-
-function setupCopyHijack() {
-    const questionBox = document.getElementById('questionBox');
-    questionBox.oncopy = function(e) {
-        e.preventDefault();
-        const youtubeLink = "https://cse.buffalo.edu/~hartloff/pic.jpg";
-        if (e.clipboardData) {
-            e.clipboardData.setData('text/plain', youtubeLink);
-        } else if (window.clipboardData) {
-            window.clipboardData.setData('Text', youtubeLink);
-        }
-    };
-}
-
-socket.on('player_pushed', function(data) {
-    const pushX = data.x;
-    const pushY = data.y;
-    const pushRadius = 100;
-    const pushStrength = 50;
-
-    for (const id in players) {
-        if (id === data.pusherId) continue;
-
-        const other = players[id];
-        const dx = other.x - pushX;
-        const dy = other.y - pushY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance < pushRadius) {
-            const factor = (pushRadius - distance) / pushRadius;
-            players[id].x += (dx / distance) * pushStrength * factor;
-            players[id].y += (dy / distance) * pushStrength * factor;
-        }
-    }
-
-    socket.emit('sync_positions', { players: players, room: ROOM_ID });
+    startTimer()
 });
 
 socket.on('update_positions', function(updatedPlayers) {
-    players = updatedPlayers;
-
-    if (players[myId]) {
-        playerX = players[myId].x;
-        playerY = players[myId].y;
+    players = {};
+    for (const id in updatedPlayers) {
+        players[id] = {
+            x: updatedPlayers[id].x,
+            y: updatedPlayers[id].y,
+            name: updatedPlayers[id].name
+        };
     }
 });
 
+socket.on('update_player_scores', function(playerScores) {
+    const playerListElement = document.getElementById('player-list');
+    playerListElement.innerHTML = '';
+
+    playerScores.forEach(function(player) {
+        const li = document.createElement('li');
+        li.textContent = `${player.username}: ${player.score} pts`;
+        playerListElement.appendChild(li);
+    });
+});
+
 socket.on('game_over', function(data) {
-    console.log("Game Over!");
-
-    // Hide game UI
     document.getElementById("gameContainer").style.display = "none";
-
-    // Show Game Over screen
-    const gameOverScreen = document.getElementById("gameOverScreen");
-    gameOverScreen.style.display = "block";
-
-    // Update winner text
-    const winnerAnnouncement = document.getElementById("winnerAnnouncement");
-    winnerAnnouncement.textContent = `Winner: ${data.winnerName} with ${data.winnerScore} points!`;
+    document.getElementById("gameOverScreen").style.display = "block";
+    document.getElementById("winnerAnnouncement").textContent = `Winner: ${data.winnerName} with ${data.winnerScore} points!`;
 });
 
 // --- Game Logic ---
@@ -147,13 +94,8 @@ function startGame() {
     if (gameRunning) return;
     gameRunning = true;
 
-    requestNewQuestion();
     startTimer();
     requestAnimationFrame(gameLoop);
-}
-
-function requestNewQuestion() {
-    socket.emit('request_next_question', { room: ROOM_ID });
 }
 
 function startTimer() {
@@ -168,22 +110,16 @@ function countdown() {
     totalTime -= 1;
     updateTimerDisplay();
 
-    let rectXBound = solutionParameter[0] + solutionParameter[2];
-    let rectYBound = solutionParameter[1] + solutionParameter[3];
-
     if (totalTime <= 0) {
-        if (playerX > solutionParameter[0] && playerX < rectXBound &&
-            playerY > solutionParameter[1] && playerY < rectYBound) {
-            playerScore += rewardScore;
-            console.log("You got the question right!");
-            console.log(`Your score is: ${playerScore}`);
-        }
-        rewardScore = 200
-
         clearInterval(intervalId);
         playerState = "Default";
-        requestNewQuestion();
-        startTimer();
+
+        // 🚀 Send my player position to server
+        socket.emit('submit_answer', {
+            x: playerX,
+            y: playerY,
+            room: ROOM_ID
+        });
     }
 }
 
@@ -193,13 +129,13 @@ function updateTimerDisplay() {
 
 // --- Drawing and Movement ---
 
-canvas.height = window.innerHeight;
-canvas.width = window.innerWidth - 275;
+canvas.width = 1024;
+canvas.height = 576;
 const radius = 10;
-var speed = 3;
+let speed = 3;
 const keysPressed = new Set();
-let playerX = canvas.width / 2;
-let playerY = canvas.height / 2;
+playerX = canvas.width / 2;
+playerY = canvas.height / 2;
 
 function drawCircle() {
     ctx.beginPath();
@@ -207,10 +143,6 @@ function drawCircle() {
     ctx.fillStyle = "teal";
     ctx.fill();
     ctx.stroke();
-
-    ctx.font = "12px Arial";
-    ctx.fillStyle = "black";
-    ctx.textAlign = "center";
 }
 
 function updatePosition() {
@@ -237,7 +169,6 @@ function drawPlayers() {
         ctx.fillStyle = "purple";
         ctx.fill();
         ctx.stroke();
-
         ctx.font = "12px Arial";
         ctx.fillStyle = "white";
         ctx.textAlign = "center";
@@ -276,8 +207,6 @@ function setUp() {
     });
 }
 
-// --- Game Loop ---
-
 function gameLoop() {
     if (speed !== 3) {
         speed -= 1;
@@ -288,7 +217,6 @@ function gameLoop() {
         updatePosition();
     }
     drawPlayers();
-    drawCircle();
     requestAnimationFrame(gameLoop);
 }
 
@@ -297,32 +225,13 @@ function gameLoop() {
 document.addEventListener("keydown", (e) => {
     keysPressed.add(e.key.toLowerCase());
 
-    if (e.code === 'Space') {
-        e.preventDefault();
-        if (playerState === "Locked") return;
-
-        playerState = "Locked";
-        
-        rewardScore += totalTime*2;
-        //document.getElementById("scoreDisplay").innerText = score;
-
-        socket.emit("update_score", {
-            score: score,
-            user_id: myId,
+    if (e.code === 'KeyR') {
+        // When player presses R, send push event
+        socket.emit('player_push', {
+            x: playerX,
+            y: playerY,
             room: ROOM_ID
         });
-
-        startTime = Date.now();
-    }
-
-
-    // r key for pushing players
-    if (e.code === 'KeyR') {
-        socket.emit('player_push', { x: playerX, y: playerY, room: ROOM_ID, pusherId: myId });
-    }
-
-    if (e.code === 'ShiftLeft') {
-        speed = 15; // Dash
     }
 });
 
@@ -334,8 +243,6 @@ document.addEventListener("keyup", (e) => {
 
 function readyUp() {
     socket.emit('player_ready', { room: ROOM_ID });
-    console.log("Ready pressed!");
-
     const button = document.getElementById("readyButton");
     if (button) {
         button.remove();
