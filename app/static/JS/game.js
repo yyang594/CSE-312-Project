@@ -6,7 +6,7 @@ let myId = null;
 
 let questionSet = {};
 let intervalId;
-let maxTime = 20;
+let maxTime = 5;
 let totalTime = maxTime;
 let playerState = "Default";
 let currentQuestion;
@@ -88,6 +88,20 @@ socket.on('game_over', function(data) {
     document.getElementById("winnerAnnouncement").textContent = `Winner: ${data.winnerName} with ${data.winnerScore} points!`;
     const didWin = (data.winnerName === yourPlayerName);
     submitGameResult(correctCount, yourFinalScore, didWin);
+
+    data = {
+        "player": data.winnerName,
+        "wins": 0,
+        "correct": 0
+    }
+    fetch('/leaderboard', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
 });
 
 

@@ -16,7 +16,7 @@ import hashlib
 import bcrypt
 
 # --- Setup Logging ---
-
+'''
 LOG_DIR = '/logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -26,6 +26,7 @@ logging.basicConfig(
     format='[%(asctime)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
+'''
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 socketio = SocketIO(app, cors_allowed_origins="*")
