@@ -17,7 +17,7 @@ import bcrypt
 
 # --- Setup Logging ---
 
-LOG_DIR = 'logs'
+LOG_DIR = '/logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
 logging.basicConfig(
@@ -34,6 +34,8 @@ collection = db['items']
 users_collection = db['users']
 questions_collection = db['questions']
 player_collection = db['players']
+leaderboard_collection = db['leaderboard']
+
 
 # ****Protects against CSRF attacks (CHANGE LATER)****
 app.config['SECRET_KEY'] = 'temporary-very-weak-key'
@@ -110,6 +112,12 @@ def login():
         response.set_cookie("auth_token", token, httponly=True, secure=True, samesite='Strict', max_age=3600)
         return response
     return render_template('login.html', form=form)
+
+
+@app.route('/leaderboard', methods=['GET', 'POST'])
+def leaderboard():
+    # top_players = list(leaderboard_collection.find({}, {"_id": 0}).sort("score", -1).limit(10))
+    return render_template('leaderboard.html')
 
 @app.route('/stats')
 def stats():
