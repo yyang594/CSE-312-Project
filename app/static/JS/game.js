@@ -3,12 +3,10 @@ const socket = io(); // Connect to WebSocket
 let players = {};
 let gameRunning = false;
 let myId = null;
-let score = 0;
-let startTime = Date.now();
 
-let questionSet = {}; // Questions sent by server
+let questionSet = {};
 let intervalId;
-let maxTime = 10;
+let maxTime = 20;
 let totalTime = maxTime;
 let playerState = "Default";
 let currentQuestion;
@@ -16,14 +14,14 @@ let answers;
 let solution;
 let solutionParameter = [];
 
-let playerScore = 0;
-let rewardScore = 200;
-
 const canvas = document.getElementById("Canvas");
 const ctx = canvas.getContext("2d");
 
 const questionDisplay = document.getElementById("questionBox");
 const timerElement = document.getElementById("timer");
+
+let playerX = 0;
+let playerY = 0;
 
 // --- Socket Events ---
 
@@ -40,29 +38,11 @@ socket.on('player_moved', function(data) {
     };
 });
 
-socket.on("start_game", function(data) {
-    console.log("Received start_game from server");
+socket.on('start_game', function() {
+    document.getElementById("waitingRoom").style.display = "none";
+    document.getElementById("gameContainer").style.display = "block";
 
-    const waitingRoom = document.getElementById("waitingRoom");
-    if (waitingRoom) waitingRoom.style.display = "none";
-
-    const gameContainer = document.getElementById("gameContainer");
-    if (gameContainer) gameContainer.style.display = "block";
-
-    loadQuestions(data.questions);
     startGame();
-});
-
-socket.on('update_lobby', function(players) {
-    const playerList = document.getElementById('player-list');
-    playerList.innerHTML = '';
-
-    for (const id in players) {
-        const player = players[id];
-        const li = document.createElement('li');
-        li.textContent = player.username + (player.ready ? ' ✅' : ' ❌');
-        playerList.appendChild(li);
-    }
 });
 
 socket.on('next_question', function(data) {
@@ -70,6 +50,7 @@ socket.on('next_question', function(data) {
     answers = [...data.answers];
     solution = data.solution;
     questionDisplay.innerHTML = currentQuestion;
+<<<<<<< HEAD
     setupCopyHijack();
 });
 
@@ -109,17 +90,42 @@ socket.on('player_pushed', function(data) {
     }
 
     socket.emit('sync_positions', { players: players, room: ROOM_ID });
+=======
+    startTimer()
+>>>>>>> 82a1dbed1637c6e181dee58ddcfccb8a9f1d1ee8
 });
 
 socket.on('update_positions', function(updatedPlayers) {
-    players = updatedPlayers;
-
-    if (players[myId]) {
-        playerX = players[myId].x;
-        playerY = players[myId].y;
+    players = {};
+    for (const id in updatedPlayers) {
+        players[id] = {
+            x: updatedPlayers[id].x,
+            y: updatedPlayers[id].y,
+            name: updatedPlayers[id].name
+        };
     }
 });
 
+<<<<<<< HEAD
+=======
+socket.on('update_player_scores', function(playerScores) {
+    const playerListElement = document.getElementById('player-list');
+    playerListElement.innerHTML = '';
+
+    playerScores.forEach(function(player) {
+        const li = document.createElement('li');
+        li.textContent = `${player.username}: ${player.score} pts`;
+        playerListElement.appendChild(li);
+    });
+});
+
+socket.on('game_over', function(data) {
+    document.getElementById("gameContainer").style.display = "none";
+    document.getElementById("gameOverScreen").style.display = "block";
+    document.getElementById("winnerAnnouncement").textContent = `Winner: ${data.winnerName} with ${data.winnerScore} points!`;
+});
+
+>>>>>>> 82a1dbed1637c6e181dee58ddcfccb8a9f1d1ee8
 // --- Game Logic ---
 
 function loadQuestions(questionsFromServer) {
@@ -133,13 +139,8 @@ function startGame() {
     if (gameRunning) return;
     gameRunning = true;
 
-    requestNewQuestion();
     startTimer();
     requestAnimationFrame(gameLoop);
-}
-
-function requestNewQuestion() {
-    socket.emit('request_next_question', { room: ROOM_ID });
 }
 
 function startTimer() {
@@ -154,10 +155,8 @@ function countdown() {
     totalTime -= 1;
     updateTimerDisplay();
 
-    let rectXBound = solutionParameter[0] + solutionParameter[2];
-    let rectYBound = solutionParameter[1] + solutionParameter[3];
-
     if (totalTime <= 0) {
+<<<<<<< HEAD
         if (playerX > solutionParameter[0] && playerX < rectXBound && playerY > solutionParameter[1] && playerY < rectYBound) {
             console.log(`REWARD SCORE: ${rewardScore}`)
             playerScore += rewardScore;
@@ -166,10 +165,17 @@ function countdown() {
             console.log(`Your score is: ${playerScore}`);
         }
 
+=======
+>>>>>>> 82a1dbed1637c6e181dee58ddcfccb8a9f1d1ee8
         clearInterval(intervalId);
         playerState = "Default";
-        requestNewQuestion();
-        startTimer();
+
+        // 🚀 Send my player position to server
+        socket.emit('submit_answer', {
+            x: playerX,
+            y: playerY,
+            room: ROOM_ID
+        });
     }
 }
 
@@ -179,13 +185,13 @@ function updateTimerDisplay() {
 
 // --- Drawing and Movement ---
 
-canvas.height = window.innerHeight;
-canvas.width = window.innerWidth - 275;
+canvas.width = 1024;
+canvas.height = 576;
 const radius = 10;
-var speed = 3;
+let speed = 3;
 const keysPressed = new Set();
-let playerX = canvas.width / 2;
-let playerY = canvas.height / 2;
+playerX = canvas.width / 2;
+playerY = canvas.height / 2;
 
 function drawCircle() {
     ctx.beginPath();
@@ -193,10 +199,6 @@ function drawCircle() {
     ctx.fillStyle = "teal";
     ctx.fill();
     ctx.stroke();
-
-    ctx.font = "12px Arial";
-    ctx.fillStyle = "black";
-    ctx.textAlign = "center";
 }
 
 function updatePosition() {
@@ -223,7 +225,6 @@ function drawPlayers() {
         ctx.fillStyle = "purple";
         ctx.fill();
         ctx.stroke();
-
         ctx.font = "12px Arial";
         ctx.fillStyle = "white";
         ctx.textAlign = "center";
@@ -262,8 +263,6 @@ function setUp() {
     });
 }
 
-// --- Game Loop ---
-
 function gameLoop() {
     if (speed !== 3) {
         speed -= 1;
@@ -274,7 +273,6 @@ function gameLoop() {
         updatePosition();
     }
     drawPlayers();
-    drawCircle();
     requestAnimationFrame(gameLoop);
 }
 
@@ -283,6 +281,7 @@ function gameLoop() {
 document.addEventListener("keydown", (e) => {
     keysPressed.add(e.key.toLowerCase());
 
+<<<<<<< HEAD
     if (e.code === 'Space') {
         e.preventDefault();
         if (playerState === "Locked") return;
@@ -310,6 +309,15 @@ document.addEventListener("keydown", (e) => {
 
     if (e.code === 'ShiftLeft') {
         speed = 15; // Dash
+=======
+    if (e.code === 'KeyR') {
+        // When player presses R, send push event
+        socket.emit('player_push', {
+            x: playerX,
+            y: playerY,
+            room: ROOM_ID
+        });
+>>>>>>> 82a1dbed1637c6e181dee58ddcfccb8a9f1d1ee8
     }
 });
 
@@ -321,8 +329,6 @@ document.addEventListener("keyup", (e) => {
 
 function readyUp() {
     socket.emit('player_ready', { room: ROOM_ID });
-    console.log("Ready pressed!");
-
     const button = document.getElementById("readyButton");
     if (button) {
         button.remove();
