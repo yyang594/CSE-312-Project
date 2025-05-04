@@ -38,7 +38,8 @@ socket.on('player_moved', function(data) {
     players[data.id] = {
         x: data.x,
         y: data.y,
-        name: data.name
+        name: data.name,
+        image: data.profile_picture || '/static/default-pfp.jpg'
     };
     if (data.id === myId) {
         yourPlayerName = data.name;  // save local name
@@ -66,7 +67,8 @@ socket.on('update_positions', function(updatedPlayers) {
         players[id] = {
             x: updatedPlayers[id].x,
             y: updatedPlayers[id].y,
-            name: updatedPlayers[id].name
+            name: updatedPlayers[id].name,
+            image: updatedPlayers[id].profile_picture || '/static/default-pfp.jpg'
         };
     }
 });
@@ -186,6 +188,29 @@ const keysPressed = new Set();
 playerX = canvas.width / 2;
 playerY = canvas.height / 2;
 
+const profileImages = {};
+
+function getProfileImage(url) {
+    if (!profileImages[url]) {
+        const img = new Image();
+        img.src = url;
+
+        // Mark it as not ready until it loads
+        img.loaded = false;
+        img.onerror = () => {
+            console.warn("Failed to load image:", url);
+            img.broken = true;
+        };
+        img.onload = () => {
+            img.loaded = true;
+        };
+
+        profileImages[url] = img;
+    }
+    return profileImages[url];
+}
+
+
 function drawCircle() {
     ctx.beginPath();
     ctx.arc(playerX, playerY, radius, 0, 2 * Math.PI);
@@ -213,11 +238,25 @@ function drawPlayers() {
     for (const id in players) {
         const p = players[id];
 
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, radius, 0, 2 * Math.PI);
-        ctx.fillStyle = "purple";
-        ctx.fill();
-        ctx.stroke();
+        const img = getProfileImage(p.image || '/static/default-pfp.jpg');
+        const imgSize = 30;
+
+        if (img.loaded && !img.broken) {
+            ctx.drawImage(img, p.x - imgSize / 2, p.y - imgSize / 2, imgSize, imgSize);
+        } else {
+            // fallback circle or skip drawing
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, imgSize / 2, 0, 2 * Math.PI);
+            ctx.fillStyle = "gray";
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        //ctx.beginPath();
+        //ctx.arc(p.x, p.y, radius, 0, 2 * Math.PI);
+        //ctx.fillStyle = "purple";
+        //ctx.fill();
+        //ctx.stroke();
         ctx.font = "12px Arial";
         ctx.fillStyle = "white";
         ctx.textAlign = "center";

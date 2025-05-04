@@ -5,6 +5,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField
 from wtforms.validators import InputRequired, Length, EqualTo, Regexp
 
+
 import requests
 import random
 import database
@@ -15,6 +16,7 @@ from html import escape
 import secrets
 import hashlib
 import bcrypt
+import uuid
 
 # --- Setup Logging ---
 
@@ -141,11 +143,11 @@ def login():
        users_collection.update_one({"username": username}, {"$set": {"auth_token": token_hash}})
 
 
-       response = make_response(redirect(url_for('home')))
-       response.set_cookie("username", username, httponly=True, secure=True, samesite='Strict')
-       response.set_cookie("auth_token", token, httponly=True, secure=True, samesite='Strict', max_age=3600)
-       return response
-   return render_template('login.html', form=form)
+        response = make_response(redirect(url_for('home')))
+        response.set_cookie("username", username, httponly=True, secure=True, samesite='Strict', max_age =3600)
+        response.set_cookie("auth_token", token, httponly=True, secure=True, samesite='Strict', max_age=3600)
+        return response
+    return render_template('login.html', form=form)
 
 @app.route('/leaderboard', methods=['GET', 'POST'])
 def leaderboard():
@@ -350,7 +352,7 @@ def handle_move(data):
 
     data.update({
         'name': user.get('username', 'Guest'),
-        'image': user.get('profile_image', '/static/uploads/default.jpg'),
+        'profile_picture': user.get('profile_image', '/static/default-pfp.jpg'),
         'id': sid
     })
     room = user.get('room')
@@ -404,7 +406,8 @@ def handle_player_push(data):
             broadcast_players[sid] = {
                 'x': pdata.get('x', 0),
                 'y': pdata.get('y', 0),
-                'name': pdata.get('username', 'Guest')
+                'name': pdata.get('username', 'Guest'),
+                'profile_picture': pdata.get('profile_image', '/static/default-pfp.jpg')
             }
 
     socketio.emit('update_positions', broadcast_players, room=room)
@@ -426,8 +429,10 @@ def handle_sync_positions(data):
         broadcast_players[sid] = {
             'x': pdata.get('x', 0),
             'y': pdata.get('y', 0),
-            'name': pdata.get('username', 'Guest')
+            'name': pdata.get('username', 'Guest'),
+            'profile_picture': pdata.get('profile_image', '/static/default-pfp.jpg')
         }
+
 
     socketio.emit('update_positions', broadcast_players, room=room)
 
@@ -543,11 +548,54 @@ def handle_update_score(data):
 
 # --- Set up avatar uploads
 
-UPLOAD_FOLDER = 'static/uploads'
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+UPLOAD_DIR = os.path.join('static', 'uploads')
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+app.config['UPLOAD_DIR'] = UPLOAD_DIR
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+@app.route('/profile')
+def profile():
+    username = request.cookies.get("username")
+    user = users_collection.find_one({"username": username})
+    if not user:
+        return redirect(url_for("home"))
+    
+    profile_pic = user.get("profile_picture", "/static/default-pfp.jpg")
+
+    return render_template("profile.html", user_pfp=profile_pic)
+
+def allowed_file(filename):
+    ALLOWED_EXTENSIONS = {"jpg", "png"}
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route("/profile/upload", methods=["POST"])
+def upload_profile_pic():
+    file = request.files["file"]
+
+    if file.filename == "":
+        return jsonify({'status': 'error', 'message': 'No file selected'}), 400
+
+    if file and allowed_file(file.filename):
+        file_extension = file.filename.rsplit('.', 1)[1].lower()
+        filename = f"{uuid.uuid4().hex}.{file_extension}"  
+
+        filepath = os.path.join(UPLOAD_DIR, filename)
+        file.save(filepath)
+
+        # Update user profile picture in the database
+        username = request.cookies.get("username")
+        if username:
+            users_collection.update_one(
+                {"username": username},
+                {"$set": {"profile_picture": f"/static/uploads/{filename}"}}
+            )
+
+            return jsonify({
+                'status': 'ok',
+                'message': 'Profile picture updated successfully!',
+                'profile_picture': f"/static/uploads/{filename}"
+            }), 200
+
+    return jsonify({'status': 'error', 'message': 'Invalid upload'}), 400
 
 # Lobby
 lobbies = {}
@@ -588,6 +636,13 @@ def handle_join(data):
     logging.info(f"[WS] {username} joined room {room} (sid={sid})")
 
     player_data[request.sid]['room'] = room
+    player_data[request.sid]['profile_image'] = profile_picture
+
+    lobbies[room]['players'][request.sid] = {
+        'username': username,
+        'ready': False,
+        'profile_picture': profile_picture
+    }
 
     emit('update_lobby', lobbies[room]['players'], room=room)
 
