@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Profile{% endblock %}
+
+{% block css_link %}
+<link rel="stylesheet" href="{{ url_for('static', filename='CSS/profile.css') }}">
+<script src="{{ url_for('static', filename='JS/profile.js') }}" defer></script>
+{% endblock %}
+
+{% block content %}
+<h1>Profile page</h1>
+
+<main>
+    <div class="profile-container">
+        {% if user_pfp %}
+            <img id="profilePicture" src="{{ user_pfp | e }}" alt="Profile picture" class="pfp">
+        {% else %}
+            <img id="profilePicture" src="{{ url_for('static', filename='default-pfp.jpg') }}" alt="Profile picture" class="pfp">
+        {% endif %}
+        <form onsubmit="handleUploadPfp(event)">
+            <label for="file-upload">Choose a profile picture (jpg & png only) : </label>
+            <input type="file" name="file" id="file-upload" accept="image/jpg, image/png">
+            <input type="submit" value="Upload">
+        </form>
+    </div>
+
+    <script>
+        document.querySelector('#file-upload').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.querySelector('.pfp').src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    </script>
+</main>
+{% endblock %}

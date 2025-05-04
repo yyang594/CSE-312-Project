@@ -143,11 +143,11 @@ def login():
        users_collection.update_one({"username": username}, {"$set": {"auth_token": token_hash}})
 
 
-        response = make_response(redirect(url_for('home')))
-        response.set_cookie("username", username, httponly=True, secure=True, samesite='Strict', max_age =3600)
-        response.set_cookie("auth_token", token, httponly=True, secure=True, samesite='Strict', max_age=3600)
-        return response
-    return render_template('login.html', form=form)
+       response = make_response(redirect(url_for('home')))
+       response.set_cookie("username", username, httponly=True, secure=True, samesite='Strict', max_age=3600)
+       response.set_cookie("auth_token", token, httponly=True, secure=True, samesite='Strict', max_age=3600)
+       return response
+   return render_template('login.html', form=form)
 
 @app.route('/leaderboard', methods=['GET', 'POST'])
 def leaderboard():
@@ -634,6 +634,10 @@ def handle_join(data):
     username = player_data.get(sid, {}).get('username', 'Guest')
     lobbies[room]['players'][request.sid] = {'username': username, 'ready': False}
     logging.info(f"[WS] {username} joined room {room} (sid={sid})")
+
+    username = player_data.get(request.sid, {}).get('username', 'Guest')
+    user = users_collection.find_one({"username": username})
+    profile_picture = user.get('profile_picture', '/static/default-pfp.jpg') if user else '/static/default-pfp.jpg'
 
     player_data[request.sid]['room'] = room
     player_data[request.sid]['profile_image'] = profile_picture
