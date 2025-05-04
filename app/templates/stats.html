@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>{{ username }}'s Game Stats</h1>
+<div class="stats-container">
+    <p><strong>Correct Answers:</strong> {{ stats.answers_correct }}</p>
+    <p><strong>Games Won:</strong> {{ stats.games_won }}</p>
+    <p><strong>Max Points:</strong> {{ stats.max_score }}</p>
+</div>
+{% endblock %}

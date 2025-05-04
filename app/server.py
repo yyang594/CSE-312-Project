@@ -9,6 +9,7 @@ import requests
 import random
 import database
 import logging
+import traceback
 import os
 from html import escape
 import secrets
@@ -17,7 +18,7 @@ import bcrypt
 
 # --- Setup Logging ---
 
-LOG_DIR = 'logs'
+LOG_DIR = '/logs'
 os.makedirs(LOG_DIR, exist_ok=True)
 
 logging.basicConfig(
@@ -27,6 +28,32 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
+# Separate logger for raw requests/responses (full.log)
+full_log_path = os.path.join(LOG_DIR, 'full.log')
+full_logger = logging.getLogger('full')
+full_logger.setLevel(logging.INFO)
+full_logger.propagate = False  # Prevents writing to app.log
+
+full_handler = logging.FileHandler(full_log_path)
+full_handler.setLevel(logging.INFO)
+full_handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
+full_logger.addHandler(full_handler)
+
+def scrub_headers(headers):
+   scrubbed = {}
+   for key, value in headers.items():
+       lower_key = key.lower()
+       if lower_key in ['authorization', 'x-auth-token']:
+           continue  # remove completely
+
+       if lower_key == 'cookie':
+           # remove cookies containing 'auth_token' or 'session'
+           cookie_parts = value.split('; ')
+           safe_cookies = [part for part in cookie_parts if not any(k in part.lower() for k in ['auth_token', 'session'])]
+           value = '; '.join(safe_cookies)
+
+       scrubbed[key] = value
+   return scrubbed
 app = Flask(__name__, static_folder='static', template_folder='templates')
 socketio = SocketIO(app, cors_allowed_origins="*")
 db = database.get_db()
@@ -34,6 +61,8 @@ collection = db['items']
 users_collection = db['users']
 questions_collection = db['questions']
 player_collection = db['players']
+leaderboard_collection = db['leaderboard']
+
 
 # ****Protects against CSRF attacks (CHANGE LATER)****
 app.config['SECRET_KEY'] = 'temporary-very-weak-key'
@@ -91,45 +120,85 @@ def game():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    form = LoginForm(request.form)
-    if request.method == 'POST' and form.validate():
-        username = escape(form.username.data)
-        password = form.password.data
+   form = LoginForm(request.form)
+   if request.method == 'POST' and form.validate():
+       username = escape(form.username.data)
+       password = form.password.data
 
-        user = users_collection.find_one({"username": username})
+       user = users_collection.find_one({"username": username})
 
-        if not user or not bcrypt.checkpw(password.encode(), user["password"]):
-            return jsonify({"success": False, "message": "Invalid credentials."}), 401
+       if not user:
+           logging.info(f"Login attempt failed: username '{username}' does not exist")
+           return jsonify({"success": False, "message": "Invalid credentials."}), 401
+       if not bcrypt.checkpw(password.encode(), user["password"]):
+           logging.info(f"Login attempt failed: incorrect password for username '{username}'")
+           return jsonify({"success": False, "message": "Invalid credentials."}), 401
 
-        token = secrets.token_hex(32)
-        token_hash = hashlib.sha256(token.encode()).hexdigest()
-        users_collection.update_one({"username": username}, {"$set": {"auth_token": token_hash}})
+       logging.info(f"Login successful for username '{username}'")
 
-        response = make_response(redirect(url_for('home')))
-        response.set_cookie("username", username, httponly=True, secure=True, samesite='Strict', max_age =3600)
-        response.set_cookie("auth_token", token, httponly=True, secure=True, samesite='Strict', max_age=3600)
-        return response
-    return render_template('login.html', form=form)
+       token = secrets.token_hex(32)
+       token_hash = hashlib.sha256(token.encode()).hexdigest()
+       users_collection.update_one({"username": username}, {"$set": {"auth_token": token_hash}})
 
-@app.route('/logout')
-def logout():
-    username = request.cookies.get('username')
+
+       response = make_response(redirect(url_for('home')))
+       response.set_cookie("username", username, httponly=True, secure=True, samesite='Strict')
+       response.set_cookie("auth_token", token, httponly=True, secure=True, samesite='Strict', max_age=3600)
+       return response
+   return render_template('login.html', form=form)
+
+@app.route('/leaderboard', methods=['GET', 'POST'])
+def leaderboard():
+    if request.method == 'POST':
+        data = request.get_json()
+        print("Received data:", data, flush=True)
+
+        doesPlayerExist = users_collection.find_one({"username": data["player"]})
+
+        if('auth_token' in request.cookies and doesPlayerExist):
+            if(leaderboard_collection.find_one({"player": data["player"]})):
+                #Player exists
+                leaderboard_collection.update_one({"player": data["player"]},
+                                                  {"$inc": {"wins": 1,
+                                                            "correct": data["correct"]}})
+            else:
+                #Player doesn't exist
+                toInsert = {
+                    "player": data["player"],
+                    "wins": 1,
+                    "correct": data["correct"]
+                }
+                leaderboard_collection.insert_one(toInsert)
+
+    return render_template('leaderboard.html')
+
+@app.route('/getInfo', methods = ['GET'])
+def getInfo():
+    #Get leaderboard info
+
+    print("CONTENTS OF DATABASE:", flush=True)
+    data = list(leaderboard_collection.find({}, {"_id": 0}))  # exclude _id if not needed
+    print(data, flush=True)
+    return jsonify(data)
+
+@app.route('/stats')
+def stats():
     auth_token = request.cookies.get('auth_token')
+    username = "Guest"
+    stats = {"answers_correct": 0, "games_won": 0, "max_score": 0}
 
-    if username and auth_token:
+    if auth_token:
         token_hash = hashlib.sha256(auth_token.encode()).hexdigest()
-
-        user = users_collection.find_one({"username": username, "auth_token": token_hash})
-
+        user = users_collection.find_one({"auth_token": token_hash})
         if user:
-            users_collection.update_one({"username": username}, {"$set": {"auth_token": ""}})
+            username = user['username']
+            stats = {
+                "answers_correct": user.get("answers_correct", 0),
+                "games_won": user.get("games_won", 0),
+                "max_score": user.get("max_score", 0)
+            }
 
-    response = make_response(redirect(url_for('home')))
-
-    response.set_cookie('username', '', expires=0)
-    response.set_cookie('auth_token', '', expires=0)
-
-    return response
+    return render_template("stats.html", username=username, stats=stats)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -140,17 +209,23 @@ def register():
         confirm_password = form.confirm_password.data
 
         if users_collection.find_one({"username": username}):
+            logging.info(f"Registration attempt failed: username '{username}' already taken")
             return jsonify({"success": False, "message": "Username already taken."}), 400
 
         if password != confirm_password:
+            logging.info(f"Registration attempt failed: passwords did not match for username '{username}'")
             return jsonify({"success": False, "message": "Passwords do not match."}), 400
 
         hashed_pw = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
         users_collection.insert_one({
             "username": username,
-            "password": hashed_pw
+            "password": hashed_pw,
+            "answers_correct": 0,
+            "games_won": 0,
+            "max_score": 0,
+            "profile_image": "/static/uploads/default.jpg"
         })
-
+        logging.info(f"Registration successful for username '{username}'")
         return redirect(url_for('home'))
 
     return render_template('register.html', form=form)
@@ -203,11 +278,58 @@ def handle_request_next_question(data):
             }, room=room)
 
 @app.before_request
-def log_request():
-    ip = request.remote_addr
-    method = request.method
-    path = request.path
-    logging.info(f"{ip} {method} {path}")
+def attach_username():
+   request.username = "Guest"
+   auth_token = request.cookies.get('auth_token')
+   if auth_token:
+       token_hash = hashlib.sha256(auth_token.encode()).hexdigest()
+       user = users_collection.find_one({"auth_token": token_hash})
+       if user:
+           request.username = user['username']
+
+@app.after_request
+def log_all_requests(response):
+   try:
+       forwarded_for = request.headers.get('X-Forwarded-For', None)
+       ip = forwarded_for.split(',')[0].strip() if forwarded_for else request.remote_addr
+       username = getattr(request, 'username', 'Guest')
+       method = request.method
+       path = request.path
+       status_code = response.status_code
+       logging.info(f"{ip} {username} {method} {path} {status_code}")
+
+       # --- FULL raw logs: to full.log only ---
+       if not path.startswith('/static'):
+           headers = scrub_headers(dict(request.headers))
+           content_type = request.content_type or ""
+
+           # 🚫 Do NOT log body for POST /login or POST /register
+           skip_body = method == 'POST' and path in ['/login', '/register']
+
+           if skip_body:
+               full_logger.info(f"REQUEST: {method} {path}\nHeaders: {headers}\n")
+           else:
+               if 'multipart/form-data' in content_type or 'application/octet-stream' in content_type:
+                   request_body = '[non-text content skipped]'
+               else:
+                   request_body = request.get_data(as_text=True)[:2048]
+
+               full_logger.info(f"REQUEST: {method} {path}\nHeaders: {headers}\nBody: {request_body}\n")
+
+           # --- Log response ---
+           resp_content_type = response.content_type or ""
+           response_headers = scrub_headers(dict(response.headers))
+           if response.direct_passthrough or 'application/octet-stream' in resp_content_type:
+               response_body = '[non-text content skipped]'
+           else:
+               response_body = response.get_data(as_text=True)[:2048]
+
+           full_logger.info(f"RESPONSE: {response.status}\nHeaders: {response_headers}\nBody: {response_body}\n")
+
+   except Exception as e:
+       logging.error(f"Failed to log request/response: {e}")
+
+   return response
 
 player_data = {}
 
@@ -222,6 +344,9 @@ def handle_move(data):
 
     # Update player_data dictionary
     player_data[sid] = user
+
+    username = user.get('username', 'Guest')
+    logging.info(f"[WS] {username} moved: {data}")
 
     data.update({
         'name': user.get('username', 'Guest'),
@@ -457,8 +582,10 @@ def handle_join(data):
     if room not in lobbies:
         lobbies[room] = {'players': {}, 'questions': []}
 
-    username = player_data[request.sid].get('username', 'Guest')
+    sid = request.sid
+    username = player_data.get(sid, {}).get('username', 'Guest')
     lobbies[room]['players'][request.sid] = {'username': username, 'ready': False}
+    logging.info(f"[WS] {username} joined room {room} (sid={sid})")
 
     player_data[request.sid]['room'] = room
 
@@ -481,6 +608,30 @@ def handle_player_ready(data):
 
         handle_request_next_question({'room': room})
 
+@socketio.on('game_result')
+def handle_game_result(data):
+    auth_token = request.cookies.get('auth_token')
+    if not auth_token:
+        return
+    token_hash = hashlib.sha256(auth_token.encode()).hexdigest()
+    user = users_collection.find_one({"auth_token": token_hash})
+    if not user:
+        return
+    # Extract stats
+    correct = int(data.get('correctAnswers', 0))
+    score = int(data.get('score', 0))
+    did_win = bool(data.get('didWin', False))
+    updates = {
+        "$inc": {
+            "answers_correct": correct,
+            "games_won": 1 if did_win else 0
+        },
+        "$max": {
+            "max_score": score
+        }
+    }
+    users_collection.update_one({"_id": user['_id']}, updates)
+
 @socketio.on('disconnect')
 def on_disconnect():
     sid = request.sid
@@ -497,6 +648,14 @@ def on_disconnect():
             del lobbies[room]
 
     player_data.pop(sid, None)
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+   # Log full traceback
+   logging.error(f"Unhandled Exception: {e}\n{traceback.format_exc()}")
+
+   # Optionally, return a generic error message
+   return "Internal Server Error", 500
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=8080, allow_unsafe_werkzeug=True, debug=False)
