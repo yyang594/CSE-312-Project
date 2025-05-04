@@ -564,7 +564,7 @@ def profile():
     return render_template("profile.html", user_pfp=profile_pic)
 
 def allowed_file(filename):
-    ALLOWED_EXTENSIONS = {"jpg", "png"}
+    ALLOWED_EXTENSIONS = {"jpg", "png", "jpeg"}
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route("/profile/upload", methods=["POST"])

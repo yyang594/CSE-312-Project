@@ -18,8 +18,8 @@
             <img id="profilePicture" src="{{ url_for('static', filename='default-pfp.jpg') }}" alt="Profile picture" class="pfp">
         {% endif %}
         <form onsubmit="handleUploadPfp(event)">
-            <label for="file-upload">Choose a profile picture (jpg & png only) : </label>
-            <input type="file" name="file" id="file-upload" accept="image/jpg, image/png">
+            <label for="file-upload">Choose a profile picture (jpg, jpeg, & jpg only) : </label>
+            <input type="file" name="file" id="file-upload" accept="image/jpg, image/png, image/jpeg">
             <input type="submit" value="Upload">
         </form>
     </div>
