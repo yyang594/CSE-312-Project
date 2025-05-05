@@ -6,7 +6,7 @@ let myId = null;
 
 let questionSet = {};
 let intervalId;
-let maxTime = 5;
+let maxTime = 20;
 let totalTime = maxTime;
 let playerState = "Default";
 let currentQuestion;
